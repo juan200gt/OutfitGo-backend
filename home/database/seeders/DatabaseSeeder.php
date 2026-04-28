@@ -56,6 +56,16 @@ class DatabaseSeeder extends Seeder
                 'rol' => 'cliente'
             ]
         );
+
+        User::updateOrCreate(
+            ['email' => 'verificado@gmail.com'],
+            [
+                'name' => 'Usuario Verificado',
+                'password' => Hash::make('cliente123'),
+                'rol' => 'cliente',
+                'email_verified_at' => now(),
+            ]
+        );
 // 2. Crear Categorías Reales
         $categorias = [
             'Zapatillas' => Categoria::updateOrCreate(['slug' => 'zapatillas'], ['nombre' => 'Zapatillas']),
