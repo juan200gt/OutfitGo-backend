@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Order; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
+use App\Models\Producto;
+use App\Mail\RecomendacionProductoMail;
+use Illuminate\Support\Facades\Mail;
 
 class PedidoController extends Controller
 {
@@ -80,4 +82,34 @@ class PedidoController extends Controller
             'pedido' => $pedido
         ], 200);
     }
+
+
+public function enviarRecomendacion($userId)
+{
+    $ultimaOrden = Order::with('orderItems.producto')
+        ->where('user_id', $userId)
+        ->latest()
+        ->first();
+
+    if (!$ultimaOrden || $ultimaOrden->orderItems->isEmpty()) {
+        return "El usuario no tiene compras.";
+    }
+
+    $categoriaId = $ultimaOrden->orderItems->first()->producto->categoria_id;
+    $productoCompradoId = $ultimaOrden->orderItems->first()->producto_id;
+
+    $recomendado = Producto::where('categoria_id', $categoriaId)
+        ->where('id', '!=', $productoCompradoId)
+        ->inRandomOrder() 
+        ->first();
+
+    if ($recomendado) {
+        $user = $ultimaOrden->user; 
+        Mail::to($user->email)->send(new RecomendacionProductoMail($user, $recomendado));
+        
+        return "Correo enviado con éxito";
+    }
+
+    return "No se encontró un producto similar para recomendar.";
+}
 }

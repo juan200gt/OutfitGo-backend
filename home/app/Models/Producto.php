@@ -78,4 +78,14 @@ class Producto extends Model
     {
         return $this->hasMany(HistorialPrecio::class);
     }
+
+    protected $casts = [
+    'galeria' => 'array',
+    ];
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
 }

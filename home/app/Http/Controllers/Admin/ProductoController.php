@@ -13,7 +13,6 @@ use App\Models\Talla;
 use App\Models\Color;
 use App\Models\Order;
 
-
 class ProductoController extends Controller
 {
 
@@ -21,14 +20,12 @@ class ProductoController extends Controller
     {
         // Traemos los productos ordenados por los más nuevos, de 10 en 10
         $productos = Producto::orderBy('id', 'asc')->paginate(10);
+        
 
-        // Los productos que estan a punto de acabarse(yo lo veo mejor)
-       // $productos = Producto::orderBy('stock', 'asc')->paginate(10);
-
-       // Se los mando a la vista
+        // Se los mando a la vista
         return view('index', compact('productos'));    
     }
-
+    
 
     public function create()
     {
@@ -42,7 +39,6 @@ class ProductoController extends Controller
         return view('create', compact('marcas', 'categorias', 'tallas', 'colores'));
     }
 
-
     public function store(Request $request)
     {
         // 1. Validamos que nos mandan todo lo obligatorio
@@ -55,19 +51,18 @@ class ProductoController extends Controller
             'tallas' => 'nullable|array',
             'colores' => 'nullable|array',
             'categoria_id' => 'required|integer',
-            'imagen' => 'nullable|image|max:2048' 
+            'imagen' => 'nullable|image|max:2048',
+            'galeria_nuevas.*' => 'nullable|image|max:2048'
         ]);
 
-        // 2. Gestionamos la subida de la imagen
+        // 2. Gestionamos la subida de la imagen principal
         $rutaImagen = null;
         if ($request->hasFile('imagen')) {
-            // Guarda la foto en la carpeta public/productos y devuelve la ruta
             $rutaImagen = $request->file('imagen')->store('productos', 'public');
         }
 
         // 3. Creamos el producto en la base de datos
         $producto = Producto::create([
-
             'nombre' => $request->nombre,
             'slug' => Str::slug($request->nombre) . '-' . rand(1000, 9999),
             'precio' => $request->precio,
@@ -78,6 +73,20 @@ class ProductoController extends Controller
             'url_imagen_principal' => $rutaImagen,    
         ]);
 
+        if ($request->hasFile('galeria_nuevas')) {
+            $galeria = [];
+            $nuevasFotos = $request->file('galeria_nuevas');
+            
+            $fotosAProcesar = array_slice($nuevasFotos, 0, 3);
+            
+            foreach ($fotosAProcesar as $foto) {
+                $galeria[] = $foto->store('productos/galeria', 'public');
+            }
+            
+            $producto->galeria = $galeria;
+            $producto->save();
+        }
+
         // 4. Sincronizamos las Tallas y Colores seleccionados
         if ($request->has('tallas')) {
             $producto->tallas()->sync($request->tallas);
@@ -85,16 +94,14 @@ class ProductoController extends Controller
         if ($request->has('colores')) {
             $producto->colores()->sync($request->colores);
         }
-        // 5. Volvemos a la tabla de productos con un mensaje de éxito
-            return redirect('/admin/productos')->with('success', '¡Producto creado con éxito!');    
-    }
 
+        return redirect('/admin/productos')->with('success', '¡Producto creado con éxito!');    
+    }
 
     public function show(string $id)
     {
         //
     }
-
 
     public function edit(string $id)
     {
@@ -116,17 +123,35 @@ class ProductoController extends Controller
         // 1. Buscamos el producto
         $producto = Producto::findOrFail($id);
 
-        // 2. Recogemos los datos del formulario 
-        $datosActualizar = $request->except(['imagen', '_token', '_method', 'tallas', 'colores']);
+        // 2. Recogemos los datos del formulario (excluimos la galería para tratarla manual)
+        $datosActualizar = $request->except(['imagen', '_token', '_method', 'tallas', 'colores', 'galeria_nuevas']);
 
         // 3. Si el usuario ha subido una imagen nueva lo guardamos
         if ($request->hasFile('imagen')) {
-
             if ($producto->url_imagen_principal) {
                 Storage::disk('public')->delete($producto->url_imagen_principal);
             }
-
             $datosActualizar['url_imagen_principal'] = $request->file('imagen')->store('productos', 'public');
+        }
+
+        if ($request->hasFile('galeria_nuevas')) {
+            $galeriaActual = $producto->galeria ?? [];
+            
+            $huecosLibres = 3 - count($galeriaActual);
+            
+            if ($huecosLibres > 0) {
+                $nuevasFotos = $request->file('galeria_nuevas');
+                $fotosAProcesar = array_slice($nuevasFotos, 0, $huecosLibres);
+                
+                foreach ($fotosAProcesar as $foto) {
+                    $ruta = $foto->store('productos/galeria', 'public');
+                    $galeriaActual[] = $ruta;
+                }
+                
+                $datosActualizar['galeria'] = $galeriaActual;
+            } else {
+                return redirect()->back()->with('error', 'El producto ya tiene el máximo de 3 imágenes en la galería.');
+            }
         }
 
         // 4. Actualizamos el producto con todos los datos
@@ -140,15 +165,20 @@ class ProductoController extends Controller
         return redirect('/admin/productos')->with('success', '¡Producto actualizado correctamente!');
     }
 
-
     public function destroy(string $id)
     {
         // 1. Buscamos el producto por su ID 
         $producto = Producto::findOrFail($id);
 
-        // 2. Borramos la imagen física del disco duro
+        // 2. Borramos la imagen física principal del disco duro
         if ($producto->url_imagen_principal) {
             Storage::disk('public')->delete($producto->url_imagen_principal);
+        }
+
+        if (is_array($producto->galeria)) {
+            foreach ($producto->galeria as $rutaGaleria) {
+                Storage::disk('public')->delete($rutaGaleria);
+            }
         }
 
         // 3. Limpiamos las tablas intermedias
@@ -160,6 +190,22 @@ class ProductoController extends Controller
 
         // 5. Volvemos a la tabla con un mensaje verde
         return redirect('/admin/productos')->with('success', '¡Producto eliminado correctamente!');
+    }
+
+    public function eliminarImagen($id)
+    {
+        $producto = Producto::findOrFail($id);
+
+        if ($producto->url_imagen_principal) {
+            Storage::disk('public')->delete($producto->url_imagen_principal);
+            
+            $producto->url_imagen_principal = null;
+            $producto->save();
+
+            return redirect()->back()->with('success', '¡Imagen eliminada correctamente!');
+        }
+
+        return redirect()->back()->with('error', 'El producto no tiene ninguna imagen que eliminar.');
     }
 
     public function aprobarDevolucion($id)
@@ -191,9 +237,18 @@ class ProductoController extends Controller
             $query->orderBy('created_at', 'asc'); 
         }])->findOrFail($id);
 
+        $historial = $producto->historialPrecios;
+
+        if ($historial->isEmpty()) {
+            return response()->json([
+                'labels' => [now()->format('d/m')],
+                'precios' => [(float) $producto->precio]
+            ], 200);
+        }
+
         return response()->json([
-            'labels' => $producto->historialPrecios->map(fn($h) => $h->created_at->format('d/m')),
-            'precios' => $producto->historialPrecios->pluck('precio')
-        ]);
+            'labels' => $historial->map(fn($h) => $h->created_at->format('d/m')),
+            'precios' => $historial->map(fn($h) => (float) $h->precio)
+        ], 200);
     }
 }

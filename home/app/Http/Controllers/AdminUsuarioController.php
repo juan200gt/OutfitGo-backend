@@ -4,16 +4,20 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Order;
+use App\Mail\RecomendacionProductoMail;
+use Illuminate\Support\Facades\Mail;
+use App\Models\Producto;
 
 class AdminUsuarioController extends Controller
 {
-
+    
     public function show($id)
     {
-        // Buscamos al usuario y cargamos su relación
-        $usuario = User::with(['pedidos' => function($query) {
+        $usuario = User::with(['orders' => function($query) {
             $query->orderByDesc('created_at');
         }])->findOrFail($id);
+
 
         return view('usuarios.show', compact('usuario'));
     }
@@ -169,16 +173,53 @@ class AdminUsuarioController extends Controller
 
     public function forceDelete($id)
     {
-    $usuario = User::findOrFail($id);
+        $usuario = User::findOrFail($id);
 
-    // No dejarse borrar a sí mismo ni al admin principal
-    if ($usuario->email === 'adminUsuarios@gmail.com' || $usuario->id === auth()->id()) {
-        return back()->with('error', 'Acción prohibida: No puedes eliminar permanentemente tu propia cuenta.');
+        // No dejarse borrar a sí mismo ni al admin principal
+        if ($usuario->email === 'adminUsuarios@gmail.com' || $usuario->id === auth()->id()) {
+            return back()->with('error', 'Acción prohibida: No puedes eliminar permanentemente tu propia cuenta.');
+        }
+
+        $usuario->delete(); 
+
+        return redirect()->route('admin.usuarios.index')->with('success', 'Usuario eliminado permanentemente de la base de datos.');
     }
 
-    $usuario->delete(); 
+    // 4. ENVIAR RECOMENDACIÓN
+    public function enviarRecomendacion($id)
+    {
+        $usuario = User::findOrFail($id);
 
-    return redirect()->route('admin.usuarios.index')->with('success', 'Usuario eliminado permanentemente de la base de datos.');
+        // 1. Buscamos la última compra del usuario
+        $ultimaOrden = Order::with('orderItems.producto')
+            ->where('user_id', $usuario->id)
+            ->latest('created_at')
+            ->first();
+
+        if (!$ultimaOrden || $ultimaOrden->orderItems->isEmpty()) {
+            return redirect()->back()->with('error', 'Este usuario aún no ha realizado ninguna compra válida para recomendarle algo.');
+        }
+
+        // 2. Cogemos los datos del primer producto de esa última compra
+        $primerItem = $ultimaOrden->orderItems->first();
+        $categoriaId = $primerItem->producto->categoria_id;
+        $productoCompradoId = $primerItem->producto_id;
+
+        // 3. Buscamos un producto similar (misma categoría, distinto ID, con stock)
+        $recomendado = Producto::where('categoria_id', $categoriaId)
+            ->where('id', '!=', $productoCompradoId)
+            ->where('stock', '>', 0)
+            ->inRandomOrder()
+            ->first();
+
+        if ($recomendado) {
+            // 4. Enviamos el correo
+            Mail::to($usuario->email)->send(new RecomendacionProductoMail($usuario, $recomendado));
+            
+            return redirect()->back()->with('success', '¡Correo de recomendación enviado a ' . $usuario->email . ' con éxito!');
+        }
+
+        return redirect()->back()->with('error', 'No hay productos similares en el catálogo para recomendarle ahora mismo.');
     }
 
 }

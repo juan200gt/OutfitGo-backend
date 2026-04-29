@@ -11,13 +11,22 @@ use App\Http\Controllers\Api\PedidoController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ResenaPaginaController;
 use \App\Http\Controllers\Api\SocialAuthController;
+use App\Http\Controllers\Api\AdminOutfitWizardController;
+use App\Http\Controllers\Api\OutfitController;
 
 
+
+Route::get('/productos/{id}/recomendados', [ProductoController::class, 'recomendados']);
+// Rutas Públicas de Outfit
+Route::post('/generar-outfit', [OutfitController::class, 'generarImagenOutfit']);
 
 // Rutas Públicas de Productos
 Route::get('/productos', [ProductoController::class, 'index']);
 Route::get('/productos/{slug}', [ProductoController::class, 'show']);
+
+//Rutas de Resenas Pagina
 Route::get('/resenas-pagina', [ResenaPaginaController::class, 'index']);
+Route::post('/resenas-pagina', [ResenaPaginaController::class, 'store']);
 
 // Rutas Públicas de Autenticación
 Route::post('/register', [AuthController::class, 'register']);
@@ -78,6 +87,4 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
 
-    Route::post('/resenas-pagina', [ResenaPaginaController::class, 'store']);
-    Route::get('/resenas-pagina', [ResenaPaginaController::class, 'index']);
 });

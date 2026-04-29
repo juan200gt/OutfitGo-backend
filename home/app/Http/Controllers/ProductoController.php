@@ -61,7 +61,7 @@ class ProductoController extends Controller
             $query->where('precio', '<=', $request->precio_max);
         }
 
-        // 🌟 3. MAGIA FACETADA: Clonamos la query ANTES de paginar
+        // 3. Clonamos la query ANTES de paginar
         $facetQuery = clone $query;
         $idsProductosVivos = $facetQuery->select('productos.id');
 
@@ -107,5 +107,19 @@ class ProductoController extends Controller
             ->firstOrFail();
 
         return response()->json($producto);
+    }
+
+    public function recomendados($id)
+    {
+        $productoActual = Producto::findOrFail($id);
+
+        $recomendados = Producto::where('categoria_id', $productoActual->categoria_id)
+            ->where('id', '!=', $id)
+            ->inRandomOrder()
+            ->limit(4)
+            ->get();
+
+
+        return response()->json($recomendados, 200);
     }
 }
