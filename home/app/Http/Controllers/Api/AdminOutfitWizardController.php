@@ -18,13 +18,13 @@ class AdminOutfitWizardController extends Controller
         ]);
 
         try {
-            // Obtenemos 50 productos activos para tener variedad
+            // Obtenemos 30 productos activos para tener variedad
             //$productos = Producto::with('categoria')->where('stock', '>', 0)->inRandomOrder()->take(50)->get();
             // En tu AdminOutfitWizardController.php
             $productos = Producto::with(['categoria', 'marca', 'colores', 'tallas'])
                 ->where('stock', '>', 0)
                 ->inRandomOrder()
-                ->take(30)
+                ->take(30) //limita la busqueda de productos
                 ->get();
             // Transformamos los productos a un array muy ligero para no saturar los tokens de la IA
             /*$inventario = $productos->map(function($prod) {

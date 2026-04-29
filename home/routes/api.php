@@ -11,16 +11,18 @@ use App\Http\Controllers\Api\PedidoController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ResenaPaginaController;
 use \App\Http\Controllers\Api\SocialAuthController;
-use App\Http\Controllers\Api\AdminOutfitWizardController;
-use App\Http\Controllers\Api\ResenaProductoController;
 
 
+
+Route::get('/productos/{id}/recomendados', [ProductoController::class, 'recomendados']);
+// Rutas Públicas de Outfit
+Route::post('/generar-outfit', [OutfitController::class, 'generarImagenOutfit']);
 
 // Rutas Públicas de Productos
 Route::get('/productos', [ProductoController::class, 'index']);
 Route::get('/productos/{slug}', [ProductoController::class, 'show']);
-Route::get('/productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
 Route::get('/resenas-pagina', [ResenaPaginaController::class, 'index']);
+Route::post('/resenas-pagina', [ResenaPaginaController::class, 'store']);
 
 // Rutas Públicas de Autenticación
 Route::post('/register', [AuthController::class, 'register']);
@@ -82,15 +84,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Direcciones
     Route::get('/addresses', [AddressController::class, 'index']);
     Route::post('/addresses', [AddressController::class, 'store']);
-    Route::put('/addresses/{id}', [AddressController::class, 'update']);
-    Route::delete('/addresses/{id}', [AddressController::class, 'destroy']);
-    Route::patch('/addresses/{id}/set-primary', [AddressController::class, 'setPrimary']);
 
-    // Cupones
-    Route::post('/cupon/validar', [\App\Http\Controllers\Api\CheckoutController::class, 'validarCupon']);
+    Route::get('/productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
 
-
-    Route::post('/productos/{id}/resenas', [ResenaProductoController::class, 'store']);
     Route::post('/resenas-pagina', [ResenaPaginaController::class, 'store']);
-    Route::post('/outfit-wizard', [AdminOutfitWizardController::class, 'generate']);
+    Route::get('/resenas-pagina', [ResenaPaginaController::class, 'index']);
 });

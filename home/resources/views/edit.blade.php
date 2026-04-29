@@ -15,6 +15,12 @@
             <a href="/admin/productos" class="text-gray-500 hover:underline">Cancelar y volver</a>
         </div>
 
+        @if($producto->url_imagen_principal)
+            <form id="form-borrar-imagen" action="{{ route('admin.productos.eliminarImagen', $producto->id) }}" method="POST" class="hidden">
+                @csrf
+            </form>
+        @endif
+
         <form action="{{ route('admin.productos.update', $producto->id) }}" method="POST" class="space-y-4" enctype="multipart/form-data">
             
             @csrf
@@ -101,22 +107,53 @@
                 </select>
             </div>
 
-            <div>
+            <div class="bg-gray-50 p-4 border rounded">
                 <label class="block text-gray-700 font-bold mb-2">Foto Principal</label>
+                            <div class="bg-gray-50 p-4 border rounded mt-4">
+                <label class="block text-gray-700 font-bold mb-2">Galería de Imágenes (Máx 3)</label>
                 
-                @if($producto->url_imagen_principal)
-                    <div class="mb-3">
-                        <p class="text-sm text-gray-500 mb-1">Foto actual:</p>
-                        <img src="{{ asset('storage/' . $producto->url_imagen_principal) }}" alt="Foto" class="w-32 h-32 object-cover rounded shadow border border-gray-200">
+                @if(is_array($producto->galeria) && count($producto->galeria) > 0)
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-500 mb-2">Imágenes en la galería ({{ count($producto->galeria) }}/3):</p>
+                        <div class="flex gap-4">
+                            @foreach($producto->galeria as $index => $imagenGaleria)
+                                <div class="relative">
+                                    <img src="{{ str_starts_with($imagenGaleria, 'http') ? $imagenGaleria : asset('storage/' . $imagenGaleria) }}" alt="Galería" class="w-24 h-24 object-cover rounded shadow border border-gray-200">
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 @endif
                 
-                <input type="file" name="imagen" accept="image/*" class="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <p class="text-xs text-gray-500 mt-1">Sube una nueva imagen solo si quieres reemplazar la actual.</p>
+                @if(!is_array($producto->galeria) || count($producto->galeria) < 3)
+                    <input type="file" name="galeria_nuevas[]" multiple accept="image/*" class="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    <p class="text-xs text-gray-500 mt-2">Puedes seleccionar varias fotos a la vez manteniendo pulsado Ctrl (Windows) o Cmd (Mac).</p>
+                @else
+                    <p class="text-sm text-red-500 font-bold mt-2">Has alcanzado el límite máximo de 3 imágenes.</p>
+                @endif
+            </div>
+                @if($producto->url_imagen_principal)
+                    <div class="mb-4 flex items-end gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">Foto actual:</p>
+                            <img src="{{ str_starts_with($producto->url_imagen_principal, 'http') ? $producto->url_imagen_principal : asset('storage/' . $producto->url_imagen_principal) }}" alt="Foto" class="w-32 h-32 object-cover rounded shadow border border-gray-200">
+                        </div>
+                        
+                        <button type="submit" form="form-borrar-imagen" class="bg-red-100 text-red-600 px-3 py-2 rounded border border-red-200 hover:bg-red-200 text-sm font-semibold transition flex items-center gap-1" onclick="return confirm('¿Seguro que quieres quitar la foto de este producto?')">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Borrar foto
+                        </button>
+                    </div>
+                @endif
+                
+                <input type="file" name="imagen" accept="image/*" class="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <p class="text-xs text-gray-500 mt-2">Sube una nueva imagen para reemplazar la actual, o usa el botón de borrar para dejar el producto sin foto.</p>
             </div>
 
             <div class="pt-4">
-                <button type="submit" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600 transition">
+                <button type="submit" class="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded hover:bg-blue-600 transition shadow-sm">
                     Guardar Cambios
                 </button>
             </div>

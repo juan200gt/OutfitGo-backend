@@ -30,9 +30,9 @@
         </div>
 
         <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-bold mb-4">Historial de Pedidos ({{ $usuario->pedidos->count() }})</h2>
+            <h2 class="text-xl font-bold mb-4">Historial de Pedidos ({{ $usuario->orders->count() }})</h2>
             
-            @if($usuario->pedidos->count() > 0)
+            @if($usuario->orders->count() > 0)
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -44,7 +44,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($usuario->pedidos as $pedido)
+                            @foreach($usuario->orders as $pedido)
                                 <tr class="hover:bg-gray-50">
                                     <td class="p-3 border-b font-bold">#{{ $pedido->id }}</td>
                                     <td class="p-3 border-b">{{ $pedido->created_at->format('d/m/Y H:i') }}</td>
@@ -68,6 +68,14 @@
             @endif
         </div>
 
-    </div>
+        <div class="mt-8 text-right">
+            <form method="POST" action="{{ route('admin.usuarios.recomendar', $usuario->id) }}">
+                @csrf
+                <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg transition">
+                    📧 Enviar Producto Recomendado
+                </button>
+            </form>
+        </div>
+
 </body>
 </html>

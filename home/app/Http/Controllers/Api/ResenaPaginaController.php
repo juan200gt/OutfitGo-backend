@@ -30,10 +30,10 @@ class ResenaPaginaController extends Controller
         $resena = new ResenaPagina();
         $resena->puntuacion = $request->puntuacion;
         $resena->comentario = $request->comentario;
-        
-        $resena->visible_en_portada = false; 
 
-        $resena->user_id = $request->user()->id; 
+        $resena->visible_en_portada = true;
+
+        $resena->user_id = $request->user()->id;
 
         $resena->save();
 

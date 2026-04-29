@@ -125,4 +125,13 @@ class Producto extends Model
     {
         return $this->hasMany(ResenaProducto::class);
     }
+    protected $casts = [
+    'galeria' => 'array',
+    ];
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
 }
