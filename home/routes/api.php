@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\Admin\ProductoController as AdminProductoController;
 use App\Http\Controllers\Api\PedidoController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ResenaPaginaController;
@@ -40,6 +41,7 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::get('/auth/google/redirect', [SocialAuthController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [SocialAuthController::class, 'handleGoogleCallback']);
 
+Route::get('/productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
 
 
 // Rutas Privadas (Requieren Autenticación)
@@ -89,7 +91,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/addresses', [AddressController::class, 'index']);
     Route::post('/addresses', [AddressController::class, 'store']);
 
-    Route::get('/productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
 
     Route::post('/resenas-pagina', [ResenaPaginaController::class, 'store']);
     Route::get('/resenas-pagina', [ResenaPaginaController::class, 'index']);

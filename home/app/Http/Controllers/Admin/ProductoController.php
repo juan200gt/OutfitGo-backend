@@ -231,24 +231,5 @@ class ProductoController extends Controller
         return redirect()->back()->with('success', ' ¡Paquete recibido, devolución aprobada y stock restaurado!');
     }
 
-    public function historialPrecios($id)
-    {
-        $producto = Producto::with(['historialPrecios' => function($query) {
-            $query->orderBy('created_at', 'asc'); 
-        }])->findOrFail($id);
 
-        $historial = $producto->historialPrecios;
-
-        if ($historial->isEmpty()) {
-            return response()->json([
-                'labels' => [now()->format('d/m')],
-                'precios' => [(float) $producto->precio]
-            ], 200);
-        }
-
-        return response()->json([
-            'labels' => $historial->map(fn($h) => $h->created_at->format('d/m')),
-            'precios' => $historial->map(fn($h) => (float) $h->precio)
-        ], 200);
-    }
 }

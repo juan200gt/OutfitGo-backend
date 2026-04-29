@@ -115,9 +115,18 @@ class ProductoController extends Controller
             $query->orderBy('created_at', 'asc'); 
         }])->findOrFail($id);
 
+        $historial = $producto->historialPrecios;
+
+        if ($historial->isEmpty()) {
+            return response()->json([
+                'labels' => [now()->format('d/m')],
+                'precios' => [(float) $producto->precio]
+            ]);
+        }
+
         return response()->json([
-            'labels' => $producto->historialPrecios->map(fn($h) => $h->created_at->format('d/m')),
-            'precios' => $producto->historialPrecios->pluck('precio')
+            'labels' => $historial->map(fn($h) => $h->created_at->format('d/m')),
+            'precios' => $historial->map(fn($h) => (float) $h->precio)
         ]);
     }
     public function recomendados($id)
