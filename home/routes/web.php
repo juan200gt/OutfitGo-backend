@@ -9,8 +9,7 @@ use App\Http\Controllers\Admin\AuthController;
 
 Route::get('/', [ProductoController::class, 'index'])->name('home');
 
-// Ruta pública para la IA
-Route::post('/outfit-wizard', [OutfitWizardController::class, 'generate']);
+
 // Ruta alternativa si quieres una url tipo /catalogo
 Route::get('/catalogo', [ProductoController::class, 'index'])->name('productos.index');
 

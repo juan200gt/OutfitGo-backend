@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PedidoController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ResenaPaginaController;
 use \App\Http\Controllers\Api\SocialAuthController;
+use App\Http\Controllers\OutfitWizardController;
 
 
 
@@ -23,6 +24,9 @@ Route::get('/productos', [ProductoController::class, 'index']);
 Route::get('/productos/{slug}', [ProductoController::class, 'show']);
 Route::get('/resenas-pagina', [ResenaPaginaController::class, 'index']);
 Route::post('/resenas-pagina', [ResenaPaginaController::class, 'store']);
+
+// Ruta pública para la IA
+Route::post('/outfit-wizard', [OutfitWizardController::class, 'generate']);
 
 // Rutas Públicas de Autenticación
 Route::post('/register', [AuthController::class, 'register']);
