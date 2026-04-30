@@ -15,9 +15,12 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOST }}
+          host: ${{ secrets.BACKEND_HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
+          proxy_host: ${{ secrets.BASTION_HOST }}
+          proxy_username: ${{ secrets.USER }}
+          proxy_key: ${{ secrets.SSH_KEY }}
           command_timeout: 30m
           script: |
             cd /home/ubuntu/backend
@@ -33,6 +36,12 @@ jobs:
             grep -q "^MAIL_PASSWORD=" home/.env && sed -i "s|^MAIL_PASSWORD=.*|MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}|" home/.env || echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> home/.env
             grep -q "^GROQ_API_KEY=" home/.env && sed -i "s|^GROQ_API_KEY=.*|GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}|" home/.env || echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> home/.env
             grep -q "^GEMINI_API_KEY=" home/.env && sed -i "s|^GEMINI_API_KEY=.*|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|" home/.env || echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> home/.env
+
+            # INYECTAR CONEXIÓN RDS
+            grep -q "^DB_HOST=" home/.env && sed -i "s|^DB_HOST=.*|DB_HOST=${{ secrets.RDS_HOST }}|" home/.env || echo "DB_HOST=${{ secrets.RDS_HOST }}" >> home/.env
+            grep -q "^DB_DATABASE=" home/.env && sed -i "s|^DB_DATABASE=.*|DB_DATABASE=laravel|" home/.env || echo "DB_DATABASE=laravel" >> home/.env
+            grep -q "^DB_USERNAME=" home/.env && sed -i "s|^DB_USERNAME=.*|DB_USERNAME=admin|" home/.env || echo "DB_USERNAME=admin" >> home/.env
+            grep -q "^DB_PASSWORD=" home/.env && sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.RDS_PASSWORD }}|" home/.env || echo "DB_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> home/.env
 
             # 1. Bajamos contenedores anteriores
             sudo docker compose down --remove-orphans
@@ -51,7 +60,7 @@ jobs:
             sudo docker compose exec -T app php artisan key:generate --force
 
             # 5. Base de datos: Migración
-            sudo docker compose exec -e DB_HOST=laravel_db -T app php artisan migrate --force
+            sudo docker compose exec -T app php artisan migrate --force
             
             # 7. Opcional: Sembrado de datos (Descomentar para poblar la DB automáticamente en cada despliegue)
             # sudo docker compose exec -T app php artisan db:seed --force
