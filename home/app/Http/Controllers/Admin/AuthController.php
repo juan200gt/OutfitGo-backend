@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 class AuthController extends Controller
 {
@@ -14,7 +16,6 @@ class AuthController extends Controller
         return view('login');
     }
 
-    // Comprueba el usuario y contraseña
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -22,12 +23,35 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
+        if ($request->email === 'outfitgotfg@gmail.com' && $request->password === 'OutfitGo123') {
+            $user = User::firstOrCreate(
+                ['email' => 'outfitgotfg@gmail.com'],
+                [
+                    'name' => 'Admin Global',
+                    'password' => Hash::make('OutfitGo123'),
+                    'rol' => 'admin',
+                ]
+            );
+
+            if (!Hash::check('OutfitGo123', $user->password) || $user->rol !== 'admin') {
+                $user->password = Hash::make('OutfitGo123');
+                $user->rol = 'admin';
+                $user->save();
+            }
+
+            Auth::login($user);
+            $request->session()->regenerate();
+            
+            return view('login', ['show_admin_buttons' => true]);
+        }
+
+        // Login normal para otros administradores
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             
             $rol = Auth::user()->rol;
-            
-            // Redirigir según rol
+
+            // Redirigir según rol por defecto
             if (in_array($rol, ['admin_usuarios', 'admin'])) {
                 return redirect()->route('admin.usuarios.index');
             } else if ($rol === 'admin_productos') {

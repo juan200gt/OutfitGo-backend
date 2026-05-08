@@ -26,6 +26,84 @@
                 </a>
             </div>
         </div>
+
+        
+        <!-- SECCIÓN DE PRUEBA TEMPORAL DE OUTFIT -->
+ <!--        <div class="mb-6 p-4 border-2 border-dashed border-purple-400 bg-purple-50 rounded-lg">
+            <h2 class="text-xl font-bold text-purple-800 mb-2">🧪 Prueba de IA - Generar Outfit</h2>
+            <p class="text-sm text-purple-600 mb-4">Usa este panel para probar rápidamente la API de <code>OutfitController</code>. Ingresa los IDs de los productos separados por comas y mira la magia.</p>
+            <form id="testOutfitForm" class="flex flex-wrap items-center gap-4">
+                <input type="text" id="testOutfitIds" placeholder="Ej: 1, 2, 5" class="border border-purple-300 p-2 rounded w-64 focus:ring focus:ring-purple-200 outline-none">
+                <button type="submit" id="btnTestOutfit" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-bold transition-colors">Generar Outfit</button>
+            </form>
+            
+            <div id="testOutfitResult" class="mt-4 hidden p-4 bg-white rounded shadow-inner">
+                <div id="testOutfitLoading" class="flex items-center text-purple-600 font-semibold gap-2">
+                    <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span>Generando imagen de outfit con IA... Esto puede tardar hasta 90 segundos.</span>
+                </div>
+                <div id="testOutfitError" class="text-red-500 font-bold hidden"></div>
+                <div id="testOutfitSuccess" class="hidden flex flex-col items-center">
+                    <p class="text-green-600 font-bold mb-2">¡Generado con éxito!</p>
+                    <img id="testOutfitImg" src="" alt="Outfit Generado" class="max-w-xs rounded shadow border border-gray-200">
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            document.getElementById('testOutfitForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const idsInput = document.getElementById('testOutfitIds').value;
+                const ids = idsInput.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+                
+                if(ids.length === 0) return alert('Por favor, ingresa al menos un ID válido.');
+                
+                const btn = document.getElementById('btnTestOutfit');
+                const resultDiv = document.getElementById('testOutfitResult');
+                const loadingDiv = document.getElementById('testOutfitLoading');
+                const errorDiv = document.getElementById('testOutfitError');
+                const successDiv = document.getElementById('testOutfitSuccess');
+                const img = document.getElementById('testOutfitImg');
+                
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                resultDiv.classList.remove('hidden');
+                loadingDiv.classList.remove('hidden');
+                errorDiv.classList.add('hidden');
+                successDiv.classList.add('hidden');
+                
+                try {
+                    const res = await fetch('/api/generar-outfit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ product_ids: ids })
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if(res.ok) {
+                        img.src = data.outfit_url;
+                        loadingDiv.classList.add('hidden');
+                        successDiv.classList.remove('hidden');
+                    } else {
+                        loadingDiv.classList.add('hidden');
+                        errorDiv.textContent = 'Error: ' + (data.error || JSON.stringify(data));
+                        errorDiv.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    loadingDiv.classList.add('hidden');
+                    errorDiv.textContent = 'Error de red: ' + error.message;
+                    errorDiv.classList.remove('hidden');
+                } finally {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        </script> -->
+        <!-- FIN SECCIÓN DE PRUEBA -->
         
         <style>
             @keyframes desaparecer {

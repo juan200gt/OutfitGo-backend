@@ -23,14 +23,10 @@
                 <input type="text" name="nombre" class="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej: Zapatillas Nike Air" required>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4">
                 <div>
                     <label class="block text-gray-700 font-bold mb-2">Precio (€)</label>
                     <input type="number" step="0.01" name="precio" class="w-full border p-2 rounded" placeholder="49.99" required>
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-bold mb-2">Stock Inicial</label>
-                    <input type="number" name="stock" class="w-full border p-2 rounded" value="0" required>
                 </div>
             </div>
 
@@ -54,46 +50,79 @@
                     </select>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-6 p-4 border rounded bg-gray-50">
-                <div>
-                    <label class="block text-gray-700 font-bold mb-2">Tallas Disponibles</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        @foreach($tallas as $talla)
-                            <label class="flex items-center space-x-2 text-sm">
-                                <input type="checkbox" name="tallas[]" value="{{ $talla->id }}" class="rounded text-blue-500">
-                                <span>{{ $talla->nombre }}</span>
-                            </label>
-                        @endforeach
+            <div class="bg-gray-50 p-4 border rounded mt-4">
+                <h3 class="text-gray-700 font-bold mb-2">Variantes (Tallas y Colores)</h3>
+                <p class="text-xs text-gray-500 mb-4">Añade las combinaciones exactas de talla y color que vendes para este producto y establece su stock inicial.</p>
+                
+                <div class="flex flex-wrap md:flex-nowrap items-end gap-4 mb-4 bg-white p-4 border rounded shadow-sm">
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Talla</label>
+                        <select id="select-talla" class="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Selecciona Talla...</option>
+                            @foreach($tallas as $talla)
+                                <option value="{{ $talla->id }}">{{ $talla->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Color</label>
+                        <select id="select-color" class="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Selecciona Color...</option>
+                            @foreach($colores as $color)
+                                <option value="{{ $color->id }}">{{ $color->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="w-32">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Stock</label>
+                        <input type="number" id="input-stock" min="0" value="0" class="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <button type="button" id="btn-add-variant" class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition">
+                            + Añadir
+                        </button>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-gray-700 font-bold mb-2">Colores</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        @foreach($colores as $color)
-                            <label class="flex items-center space-x-2 text-sm">
-                                <input type="checkbox" name="colores[]" value="{{ $color->id }}" class="rounded text-blue-500">
-                                <span class="w-3 h-3 inline-block rounded-full border border-gray-300" style="background-color: {{ $color->hex_code }}"></span>
-                                <span>{{ $color->nombre }}</span>
-                            </label>
-                        @endforeach
-                    </div>
+                <div id="hidden-sync-inputs" style="display: none;">
+                    @foreach($tallas as $talla)
+                        <input type="checkbox" name="tallas[]" value="{{ $talla->id }}" id="sync_talla_{{ $talla->id }}">
+                    @endforeach
+                    @foreach($colores as $color)
+                        <input type="checkbox" name="colores[]" value="{{ $color->id }}" id="sync_color_{{ $color->id }}">
+                    @endforeach
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse bg-white border" id="variants-table">
+                        <thead>
+                            <tr class="bg-gray-200 text-gray-700">
+                                <th class="p-2 border">Talla</th>
+                                <th class="p-2 border">Color</th>
+                                <th class="p-2 border w-1/3">Stock (Unidades)</th>
+                                <th class="p-2 border text-center">Quitar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($tallas as $talla)
+                                @foreach($colores as $color)
+                                    <tr id="row_{{ $talla->id }}_{{ $color->id }}" class="variant-row" style="display: none;" data-talla="{{ $talla->id }}" data-color="{{ $color->id }}">
+                                        <td class="p-2 border text-sm">{{ $talla->nombre }}</td>
+                                        <td class="p-2 border text-sm">{{ $color->nombre }}</td>
+                                        <td class="p-2 border">
+                                            <input type="number" min="0" name="variantes[{{ $talla->id }}][{{ $color->id }}]" id="stock_{{ $talla->id }}_{{ $color->id }}" value="0" class="w-full border p-1 rounded focus:ring-blue-500 focus:border-blue-500" disabled required>
+                                        </td>
+                                        <td class="p-2 border text-center">
+                                            <button type="button" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 text-lg leading-none" onclick="quitarVariante({{ $talla->id }}, {{ $color->id }})">&times;</button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div>
-                <label class="block text-gray-700 font-bold mb-2">Público</label>
-                <select name="publico" class="w-full border p-2 rounded">
-                    <option value="unisex">Unisex</option>
-                    <option value="hombre">Hombre</option>
-                    <option value="mujer">Mujer</option>
-                    <option value="infantil">Infantil</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-gray-700 font-bold mb-2">Foto Principal</label>
-                <input type="file" name="imagen" accept="image/*" class="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
             <div class="pt-4">
                 <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
                     Guardar Producto
@@ -103,5 +132,52 @@
 
     </div>
 
+    <script>
+        function actualizarSync() {
+            // Desmarcamos todos los inputs ocultos
+            document.querySelectorAll('#hidden-sync-inputs input[type="checkbox"]').forEach(cb => cb.checked = false);
+            // Marcamos solo aquellos correspondientes a las variantes activas (visibles)
+            document.querySelectorAll('.variant-row[style=""]').forEach(row => {
+                document.getElementById('sync_talla_' + row.dataset.talla).checked = true;
+                document.getElementById('sync_color_' + row.dataset.color).checked = true;
+            });
+        }
+
+        function agregarVariante() {
+            const tId = document.getElementById('select-talla').value;
+            const cId = document.getElementById('select-color').value;
+            const stock = document.getElementById('input-stock').value;
+
+            if (!tId || !cId) return alert('Por favor, selecciona una talla y un color.');
+
+            const row = document.getElementById(`row_${tId}_${cId}`);
+            if (row.style.display === '') return alert('Esta combinación de talla y color ya ha sido añadida.');
+
+            // Mostrar fila y habilitar input
+            row.style.display = '';
+            const input = document.getElementById(`stock_${tId}_${cId}`);
+            input.disabled = false;
+            input.value = stock;
+
+            actualizarSync();
+
+            // Resetear selects
+            document.getElementById('select-talla').value = '';
+            document.getElementById('select-color').value = '';
+            document.getElementById('input-stock').value = '0';
+        }
+
+        function quitarVariante(tId, cId) {
+            // Ocultar fila y deshabilitar input para que no se envíe al servidor
+            const row = document.getElementById(`row_${tId}_${cId}`);
+            row.style.display = 'none';
+            document.getElementById(`stock_${tId}_${cId}`).disabled = true;
+
+            actualizarSync();
+        }
+
+        // Hacer la función agregarVariante accesible al botón
+        document.getElementById('btn-add-variant').addEventListener('click', agregarVariante);
+    </script>
 </body>
 </html>

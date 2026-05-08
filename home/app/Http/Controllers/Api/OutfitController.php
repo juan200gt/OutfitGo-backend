@@ -5,103 +5,99 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use \App\Models\Producto;
+use App\Models\Producto;
+
 
 class OutfitController extends Controller
 {
     public function generarImagenOutfit(Request $request)
     {
-        // 1. Validar la entrada (Angular / Postman)
         $ids = $request->input('product_ids');
-        $urlModelo = $request->input('modelo_url');
 
         if (!$ids || !is_array($ids)) {
-            return response()->json(['error' => 'Faltan las prendas de ropa (product_ids).'], 400);
-        }
-        if (!$urlModelo) {
-            return response()->json(['error' => 'Falta la URL de la imagen del modelo (modelo_url).'], 400);
+            return response()->json(['error' => 'No has seleccionado ninguna prenda.'], 400);
         }
 
-        // Buscamos los productos en la base de datos
         $productos = Producto::whereIn('id', $ids)->get();
 
-        if ($productos->isEmpty()) {
-            return response()->json(['error' => 'No se encontraron los productos seleccionados'], 404);
-        }
-
         try {
-            // 2. Preparamos las partes (Prompt + Imágenes en Base64)
-            // Instrucción clara y concisa para Nano Banana 2
-            $partes = [
-                ["text" => "Actúa como un probador virtual (Virtual Try-On). Mantén a la persona de la última imagen con su misma postura y rostro. Vístela usando de forma realista las prendas de ropa mostradas en las imágenes anteriores. Ajusta la iluminación y las texturas para que el resultado sea fotográfico."]
-            ];
+            $nombres = [];
+            $imagenes = [];
 
-            // Añadimos cada prenda al array de partes
+            // 1. Procesamos cada prenda con tu lógica robusta
             foreach ($productos as $producto) {
-                // Asegúrate de que $producto->url_imagen_principal es una URL válida y accesible
-                $prendaBase64 = base64_encode(file_get_contents($producto->url_imagen_principal));
-                $partes[] = [
-                    "inline_data" => [
-                        "mime_type" => "image/jpeg",
-                        "data" => $prendaBase64
-                    ]
-                ];
-            }
+                $url = $producto->url_imagen_principal;
+                $archivo = null;
+                $mime = 'image/jpeg';
 
-            // Finalmente, añadimos la imagen del modelo
-            $modeloBase64 = base64_encode(file_get_contents($urlModelo));
-            $partes[] = [
-                "inline_data" => [
-                    "mime_type" => "image/jpeg",
-                    "data" => $modeloBase64
-                ]
-            ];
-
-            // 3. Llamada a la API de Nano Banana 2 (Gemini 3.1 Flash Image)
-            $modelName = "gemini-3.1-flash-image-preview";
-            $apiKey = env('GEMINI_API_KEY');
-
-            // Hacemos el POST (Le damos 120 segundos de timeout por si procesar la imagen tarda)
-            $response = Http::withHeaders(['Content-Type' => 'application/json'])
-                ->timeout(120) 
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$modelName}:generateContent?key={$apiKey}", [
-                    "contents" => [
-                        ["parts" => $partes]
-                    ]
-                    // OJO: No usamos generationConfig con response_mime_type porque da el error 400
-                ]);
-
-            // 4. Gestión de Errores de Google
-            if ($response->failed()) {
-                if ($response->status() === 429) {
-                    return response()->json([
-                        'error' => 'Límite de cuota excedido. Asegúrate de tener la facturación activa en Google Cloud para usar modelos Preview.',
-                        'details' => $response->json()
-                    ], 429);
+                if (str_starts_with($url, 'http')) {
+                    try {
+                        $imgResponse = Http::get($url);
+                        if ($imgResponse->successful()) {
+                            $archivo = $imgResponse->body();
+                            $mime = $imgResponse->header('Content-Type') ?? 'image/jpeg';
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error("Error al descargar imagen externa: " . $url);
+                    }
+                } else {
+                    $path = public_path($url);
+                    if (file_exists($path)) {
+                        $archivo = file_get_contents($path);
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mime = finfo_file($finfo, $path);
+                        finfo_close($finfo);
+                    } else {
+                        \Log::error("Archivo no encontrado: " . $path);
+                    }
                 }
-                return response()->json([
-                    'error' => 'Error al comunicarse con Google AI Studio',
-                    'details' => $response->json()
-                ], $response->status());
-            }
 
-            $result = $response->json();
-
-            // 5. Extraer la imagen generada (Base64)
-            if (isset($result['candidates'][0]['content']['parts'][0]['inlineData']['data'])) {
-                $base64Image = $result['candidates'][0]['content']['parts'][0]['inlineData']['data'];
-                $mimeType = $result['candidates'][0]['content']['parts'][0]['inlineData']['mimeType'] ?? 'image/jpeg';
+                if ($archivo) {
+                    $imagenes[] = "data:{$mime};base64," . base64_encode($archivo);
+                }
                 
-                return response()->json([
-                    'outfit_url' => "data:{$mimeType};base64,{$base64Image}",
-                    'explicacion' => 'Look completo generado con Gemini 3.1 Flash Image (Nano Banana 2).'
-                ]);
+                $nombres[] = $producto->nombre;
             }
 
-            return response()->json(['error' => 'La IA no devolvió el formato esperado', 'raw' => $result], 500);
+            // 2. Preparamos el Prompt para Flux
+            $descripcionPrendas = implode(', ', $nombres);
+            $prompt = "Professional fashion photography editorial. A model wearing a complete outfit combining exactly these items: " . $descripcionPrendas . ". High-end studio lighting, 8k, photorealistic, 35mm lens.";
+
+            // 3. Llamada a Flux 2 Pro
+            $response = Http::withToken(env('REPLICATE_API_TOKEN'))
+                ->withHeaders(['Prefer' => 'wait'])
+                ->timeout(90)
+                ->post('https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions', [
+                    'input' => [
+                        'prompt' => $prompt,
+                        'aspect_ratio' => '3:4',
+                        'output_format' => 'jpg'
+                        // Nota: En Flux 2 Pro estándar, le pasamos solo el prompt para evitar errores de validación. 
+                        // El modelo dibujará el outfit basándose en los nombres de las prendas.
+                    ]
+                ]);
+
+            if ($response->failed()) {
+                return response()->json(['error' => 'Error en la IA de Flux', 'details' => $response->json()], 500);
+            }
+
+            $resultado = $response->json();
+            $output = $resultado['output'] ?? null;
+            $imageUrl = is_array($output) ? $output[0] : $output;
+
+            if (!$imageUrl) {
+                return response()->json(['error' => 'La IA no devolvió la imagen final.', 'raw' => $resultado], 500);
+            }
+
+            return response()->json([
+                'mensaje' => '¡Hecho! Aquí tienes el outfit de inspiración:',
+                'outfit_url' => $imageUrl,
+                'prendas_usadas' => $nombres
+            ]);
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error interno del servidor', 'msg' => $e->getMessage()], 500);
+            // Este es el error de PHP que verías en la pestaña Red
+            return response()->json(['error' => 'Error interno de Laravel', 'msg' => $e->getMessage()], 500);
         }
     }
 }

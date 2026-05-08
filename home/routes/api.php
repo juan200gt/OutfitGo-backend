@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\ResenaPaginaController;
 use \App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\OutfitWizardController;
+use App\Http\Controllers\Api\OutfitController;
 
 
 

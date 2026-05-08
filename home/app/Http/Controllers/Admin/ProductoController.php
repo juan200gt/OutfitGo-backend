@@ -95,6 +95,20 @@ class ProductoController extends Controller
             $producto->colores()->sync($request->colores);
         }
 
+        // 5. Guardamos las variantes de stock si existen
+        $variantes = $request->input('variantes', []);
+        foreach ($variantes as $tallaId => $coloresArray) {
+            foreach ($coloresArray as $colorId => $stock) {
+                if ($stock !== null && $stock !== '') {
+                    $producto->variantes()->create([
+                        'talla_id' => $tallaId,
+                        'color_id' => $colorId,
+                        'stock' => $stock
+                    ]);
+                }
+            }
+        }
+
         return redirect('/admin/productos')->with('success', '¡Producto creado con éxito!');    
     }
 
@@ -161,7 +175,22 @@ class ProductoController extends Controller
         $producto->tallas()->sync($request->input('tallas', []));
         $producto->colores()->sync($request->input('colores', []));
 
-        // 6. Volvemos a la tabla
+        // 6. Actualizamos las variantes
+        $producto->variantes()->delete(); // Borramos las antiguas
+        $variantes = $request->input('variantes', []);
+        foreach ($variantes as $tallaId => $coloresArray) {
+            foreach ($coloresArray as $colorId => $stock) {
+                if ($stock !== null && $stock !== '') {
+                    $producto->variantes()->create([
+                        'talla_id' => $tallaId,
+                        'color_id' => $colorId,
+                        'stock' => $stock
+                    ]);
+                }
+            }
+        }
+
+        // 7. Volvemos a la tabla
         return redirect('/admin/productos')->with('success', '¡Producto actualizado correctamente!');
     }
 
