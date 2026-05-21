@@ -67,8 +67,9 @@ jobs:
             grep -q "^DB_USERNAME=" home/.env && sed -i "s|^DB_USERNAME=.*|DB_USERNAME=admin|" home/.env || echo "DB_USERNAME=admin" >> home/.env
             grep -q "^DB_PASSWORD=" home/.env && sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.RDS_PASSWORD }}|" home/.env || echo "DB_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> home/.env
 
-            # 1. Bajamos contenedores anteriores
+            # 1. Bajamos contenedores anteriores y liberamos espacio en disco
             sudo docker compose down --remove-orphans
+            sudo docker system prune -af
 
             # 2. Instalación de librerías ANTES de levantar el servicio principal
             # Usamos 'run --rm' para crear un contenedor temporal que instale todo
