@@ -78,24 +78,24 @@ jobs:
             grep -q "^DB_PASSWORD=" home/.env && sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.RDS_PASSWORD }}|" home/.env || echo "DB_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> home/.env
 
             # 1. Bajamos contenedores anteriores y liberamos espacio en disco
-            sudo docker compose down --remove-orphans
+            sudo docker compose -f docker-compose.prod.yml down --remove-orphans
             sudo docker system prune -af
 
             # 2. Instalación de librerías ANTES de levantar el servicio principal
             # Usamos 'run --rm' para crear un contenedor temporal que instale todo
-            sudo docker compose run --rm app composer install --optimize-autoloader
+            sudo docker compose -f docker-compose.prod.yml run --rm app composer install --optimize-autoloader
 
             # 3. Levantamos el sistema completo
-            sudo docker compose up -d --build
+            sudo docker compose -f docker-compose.prod.yml up -d --build
             
             # 4. Arreglo de permisos y Limpieza de caché
             sudo chown -R ubuntu:www-data home/storage home/bootstrap/cache
             sudo chmod -R 775 home/storage home/bootstrap/cache
-            sudo docker compose exec -T app php artisan config:clear
-            sudo docker compose exec -T app php artisan key:generate --force
+            sudo docker compose -f docker-compose.prod.yml exec -T app php artisan config:clear
+            sudo docker compose -f docker-compose.prod.yml exec -T app php artisan key:generate --force
 
             # 5. Base de datos: Migración
-            sudo docker compose exec -T app php artisan migrate --force
+            sudo docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
             
             # 7. Opcional: Sembrado de datos (Descomentar para poblar la DB automáticamente en cada despliegue)
-            # sudo docker compose exec -T app php artisan db:seed --force
+            # sudo docker compose -f docker-compose.prod.yml exec -T app php artisan db:seed --force

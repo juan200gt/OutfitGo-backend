@@ -11,6 +11,8 @@ services:
     volumes:
       - ./home:/var/www/html
     command: sh -c "cd /var/www/html && php artisan serve --host=0.0.0.0 --port=8000"
+    depends_on:
+      - db
 
   nginx:
     image: nginx:stable-alpine
@@ -24,3 +26,32 @@ services:
     depends_on:
       - app
 
+  db:
+    image: mysql:8.0
+    container_name: laravel_db
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: dwes
+      MYSQL_PASSWORD: dwes
+    volumes:
+      - db_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: laravel_phpmyadmin
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: dwes
+      PMA_PASSWORD: dwes
+    depends_on:
+      - db
+
+volumes:
+  db_data:
