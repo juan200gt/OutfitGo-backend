@@ -175,6 +175,52 @@ class DatabaseSeeder extends Seeder
                 'tallas' => [$tallasObjects['Infantil']['4Y']->id, $tallasObjects['Infantil']['6Y']->id, $tallasObjects['Infantil']['8Y']->id]
             ],
             [
+                'nombre' => 'Camiseta Essentials Boyfriend',
+                'descripcion' => 'Esta camiseta deadidas se ha confeccionado en algodón suave y cómoda, y presenta un corte holgado que te aporta una total libertad de movimiento. El icónico logo de adidas le da un toque clásico y deportivo.',
+                'publico' => 'mujer',
+                'url_imagen_principal' => 'https://assets.adidas.com/images/h_2000,f_auto,q_auto,fl_lossy,c_fill,g_auto/7bd5ad66e0b7407d8368315e1a88e293_9366/Camiseta_Essentials_Boyfriend_Negro_IY7321_01_laydown.jpg',
+                'url_imagenes_secundarias' => [
+                    'https://assets.adidas.com/images/h_2000,f_auto,q_auto,fl_lossy,c_fill,g_auto/fe676e27209a4f33b5cf0b0116fc115d_9366/Camiseta_Essentials_Boyfriend_Gris_IY7324_01_laydown.jpg',
+                ],
+                'precio' => 25.00,
+                'stock' => 25,
+                'marca' => $marcas['Adidas']->id,
+                'categoria' => $categorias['Camisetas']->id,
+                'colores' => [$colores['Blanco']->id, $colores['Negro']->id],
+                'tallas' => [$tallasObjects['Adulto']['S']->id, $tallasObjects['Adulto']['M']->id, $tallasObjects['Adulto']['L']->id, $tallasObjects['Adulto']['XL']->id, $tallasObjects['Adulto']['XXL']->id],
+                'stock_variantes' => [
+                    'S' => ['Blanco' => 10, 'Negro' => 10],
+                    'M' => ['Blanco' => 15, 'Negro' => 15],
+                    'L' => ['Blanco' => 20, 'Negro' => 20],
+                    'XL' => ['Blanco' => 25, 'Negro' => 25],
+                    'XXL' => ['Blanco' => 30, 'Negro' => 30],
+                ]
+            ],
+            [
+                'nombre' => 'Zapatilla SL 72 OG',
+                'descripcion' => 'Esta zapatilla adidas SL 72 OG aúna sencillez y comodidad. Presenta una silueta estilizada de caña baja y un empeine de nailon con refuerzos de ante que le confieren un estilo retro inspirado en el running.',
+                'publico' => 'hombre',
+                'url_imagen_principal' => 'https://assets.adidas.com/images/h_2000,f_auto,q_auto,fl_lossy,c_fill,g_auto/fb80869136dc4eef8ccb216942db063e_9366/Zapatilla_SL_72_OG_Marron_JI0188_04_standard.jpg',
+                'url_imagenes_secundarias' => [
+                    'https://assets.adidas.com/images/h_2000,f_auto,q_auto,fl_lossy,c_fill,g_auto/2fdcb46e3d40459f80ff365962996d8a_9366/Zapatilla_SL_72_OG_Rojo_JH7392_04_standard.jpg',
+                    'https://assets.adidas.com/images/h_2000,f_auto,q_auto,fl_lossy,c_fill,g_auto/6aa94588215e44b2b358ed4609a56e18_9366/Zapatilla_SL_72_OG_Azul_JS0255_04_standard.jpg',
+                ],
+                'precio' => 75.00,
+                'stock' => 25,
+                'marca' => $marcas['Adidas']->id,
+                'categoria' => $categorias['Zapatillas']->id,
+                'colores' => [$colores['Rojo']->id, $colores['Negro']->id, $colores['Azul Marino']->id,],
+                'tallas' => [$tallasObjects['Calzado']['40']->id, $tallasObjects['Calzado']['41']->id, $tallasObjects['Calzado']['42']->id, $tallasObjects['Calzado']['43']->id, $tallasObjects['Calzado']['44']->id],
+                'stock_variantes' => [
+                    '40' => ['Rojo' => 40, 'Negro' => 40, 'Azul Marino' => 40],
+                    '41' => ['Rojo' => 41, 'Negro' => 41, 'Azul Marino' => 41],
+                    '42' => ['Rojo' => 42, 'Negro' => 42, 'Azul Marino' => 42],
+                    '43' => ['Rojo' => 43, 'Negro' => 43, 'Azul Marino' => 43],
+                    '44' => ['Rojo' => 44, 'Negro' => 44, 'Azul Marino' => 44],
+                ]
+            ],
+
+            [
                 'nombre' => 'Zapatillas de Running Puma Velocity Nitro 2',
                 'descripcion' => 'Experimenta la sensación real de flotar sobre el asfalto cuando sales a correr utilizando las zapatillas de alto rendimiento Puma Velocity Nitro 2. Este excepcional calzado deportivo neutro integra en toda la entresuela la innovadora espuma inyectada con gas nitrógeno patentada por la marca, garantizando de este modo un retorno de energía supremo, una amortiguación absurdamente suave y sobre todo una ligereza incomparable. El exterior de malla súper técnica envuelve cuidadosamente todo tu pie proporcionando increíble sujeción.',
                 'publico' => 'hombre',
@@ -271,10 +317,17 @@ class DatabaseSeeder extends Seeder
             // 🌟 CREAR LAS VARIANTES (Evitando duplicados con updateOrCreate)
             foreach ($pData['tallas'] as $tallaId) {
                 foreach ($pData['colores'] as $colorId) {
+                    $tallaNombre = Talla::find($tallaId)->nombre;
+                    $colorNombre = Color::find($colorId)->nombre;
 
-                    // Truco matemático: 1 de cada 4 variantes tendrá stock 0 (Agotado), 
-                    // el resto tendrá un número aleatorio muy dispar entre 1 y 150.
-                    $stockDemo = (rand(1, 4) === 1) ? 0 : rand(1, 150);
+                    // Si hay un stock específico configurado, se usa. Si no, se genera aleatorio.
+                    if (isset($pData['stock_variantes'][$tallaNombre][$colorNombre])) {
+                        $stockDemo = $pData['stock_variantes'][$tallaNombre][$colorNombre];
+                    } else {
+                        // Truco matemático: 1 de cada 4 variantes tendrá stock 0 (Agotado), 
+                        // el resto tendrá un número aleatorio muy dispar entre 1 y 150.
+                        $stockDemo = (rand(1, 4) === 1) ? 0 : rand(1, 150);
+                    }
 
                     ProductoVariante::updateOrCreate(
                         [
@@ -289,12 +342,20 @@ class DatabaseSeeder extends Seeder
                 }
             }
 
-            // Generar 3 imágenes secundarias (SOLO si no tiene ya imágenes creadas)
+            // Generar imágenes secundarias
             if ($producto->imagenes()->count() === 0) {
-                for ($i = 1; $i <= 3; $i++) {
-                    $producto->imagenes()->create([
-                        'url_imagen' => 'https://picsum.photos/seed/' . $producto->id . $i . '/800/800'
-                    ]);
+                if (!empty($pData['url_imagenes_secundarias'])) {
+                    foreach ($pData['url_imagenes_secundarias'] as $urlSecundaria) {
+                        $producto->imagenes()->create([
+                            'url_imagen' => $urlSecundaria
+                        ]);
+                    }
+                } else {
+                    for ($i = 1; $i <= 3; $i++) {
+                        $producto->imagenes()->create([
+                            'url_imagen' => 'https://picsum.photos/seed/' . $producto->id . $i . '/800/800'
+                        ]);
+                    }
                 }
             }
         }
@@ -360,7 +421,6 @@ class DatabaseSeeder extends Seeder
             $producto->tallas()->sync($tallasAUsar);
             $producto->colores()->sync($coloresAUsar);
 
-            // 🌟 CREAR LAS VARIANTES DE STOCK PARA LOS CLONES
             foreach ($tallasAUsar as $tallaId) {
                 foreach ($coloresAUsar as $colorId) {
                     ProductoVariante::updateOrCreate(
@@ -376,7 +436,7 @@ class DatabaseSeeder extends Seeder
                 }
             }
 
-            // Generar imágenes clones (SOLO si no tiene ya)
+            // Generar imágenes clones 
             if ($producto->imagenes()->count() === 0) {
                 for ($i = 1; $i <= 3; $i++) {
                     $producto->imagenes()->create([
