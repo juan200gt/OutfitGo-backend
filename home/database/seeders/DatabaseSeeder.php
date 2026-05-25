@@ -8,10 +8,12 @@ use App\Models\Marca;
 use App\Models\Categoria;
 use App\Models\Producto;
 use App\Models\ProductoVariante;
+use App\Models\HistorialPrecio;
 use App\Models\Talla;
 use App\Models\Color;
 use App\Models\Cupon;
 use Illuminate\Database\Seeder;
+use App\Models\ResenaPagina;
 
 class DatabaseSeeder extends Seeder
 {
@@ -516,7 +518,91 @@ class DatabaseSeeder extends Seeder
             }
         }
 
-        echo "✅ Base de datos poblada con éxito con catálogos hiper-realistas y SKUs de Variantes generados.\n";
+        // 10. CREAR HISTORIAL DE PRECIOS PARA LOS DOS NUEVOS PRODUCTOS
+        $productoCamiseta = Producto::where('slug', 'camiseta-essentials-boyfriend')->first();
+        if ($productoCamiseta) {
+            $productoCamiseta->historialPrecios()->delete();
+
+            $preciosCamiseta = [
+                ['precio' => 32.50, 'dias' => 14],
+                ['precio' => 29.99, 'dias' => 10],
+                ['precio' => 27.00, 'dias' => 7],
+                ['precio' => 25.00, 'dias' => 0],
+            ];
+
+            foreach ($preciosCamiseta as $pc) {
+                $hp = new HistorialPrecio();
+                $hp->producto_id = $productoCamiseta->id;
+                $hp->precio = $pc['precio'];
+                $hp->created_at = now()->subDays($pc['dias']);
+                $hp->save();
+            }
+        }
+
+        $productoZapatilla = Producto::where('slug', 'zapatilla-sl-72-og')->first();
+        if ($productoZapatilla) {
+            $productoZapatilla->historialPrecios()->delete();
+
+            $preciosZapatilla = [
+                ['precio' => 95.00, 'dias' => 20],
+                ['precio' => 89.99, 'dias' => 15],
+                ['precio' => 80.00, 'dias' => 8],
+                ['precio' => 75.00, 'dias' => 0],
+            ];
+
+            foreach ($preciosZapatilla as $pz) {
+                $hp = new HistorialPrecio();
+                $hp->producto_id = $productoZapatilla->id;
+                $hp->precio = $pz['precio'];
+                $hp->created_at = now()->subDays($pz['dias']);
+                $hp->save();
+            }
+        }
+
+        // 11. CREAR RESEÑAS DE LA PÁGINA (LANDING)
+        $usuariosResenas = [
+            [
+                'email' => 'sofia.martin@gmail.com',
+                'name' => 'Sofía Martín',
+                'puntuacion' => 5,
+                'comentario' => '¡Me encanta OutfitGo! La variedad de marcas es espectacular y el envío me llegó súper rápido, en menos de 48 horas ya tenía mi pedido en casa. Totalmente recomendado.',
+            ],
+            [
+                'email' => 'carlos.ruiz@gmail.com',
+                'name' => 'Carlos Ruiz',
+                'puntuacion' => 5,
+                'comentario' => 'La calidad de las prendas es excelente. Además, la funcionalidad para ver el historial de precios me parece súper útil para comprar en el mejor momento.',
+            ],
+            [
+                'email' => 'lucia.fernandez@gmail.com',
+                'name' => 'Lucía Fernández',
+                'puntuacion' => 4,
+                'comentario' => 'Muy buena experiencia de compra. La atención al cliente fue muy amable cuando les consulté una duda sobre las tallas de las zapatillas. Volveré a comprar.',
+            ],
+        ];
+
+        ResenaPagina::query()->delete();
+
+        foreach ($usuariosResenas as $ur) {
+            $user = User::updateOrCreate(
+                ['email' => $ur['email']],
+                [
+                    'name' => $ur['name'],
+                    'password' => Hash::make('cliente123'),
+                    'rol' => 'cliente',
+                    'email_verified_at' => now(),
+                ]
+            );
+
+            ResenaPagina::create([
+                'user_id' => $user->id,
+                'puntuacion' => $ur['puntuacion'],
+                'comentario' => $ur['comentario'],
+                'visible_en_portada' => true,
+            ]);
+        }
+
+        echo "✅ Base de datos poblada con éxito con catálogos hiper-realistas, SKUs de Variantes, historial de precios y reseñas de landing generados.\n";
         $this->call([
             OutfitTestSeeder::class
         ]);

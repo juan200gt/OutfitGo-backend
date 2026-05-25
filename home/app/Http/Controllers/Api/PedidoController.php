@@ -15,6 +15,29 @@ class PedidoController extends Controller
     /**
      * Devuelve el historial de pedidos del usuario logueado.
      */
+    private function sincronizarEstadosPedidos($pedidos)
+    {
+        $ahora = now();
+        foreach ($pedidos as $pedido) {
+            if ($pedido->estado === 'pagado' || $pedido->estado === 'entregando') {
+                $segundos = $ahora->diffInSeconds($pedido->updated_at);
+                
+                if ($segundos >= 15) {
+                    $pedido->estado = 'entregado';
+                    $pedido->timestamps = false;
+                    $pedido->save();
+                } elseif ($segundos >= 10 && $pedido->estado === 'pagado') {
+                    $pedido->estado = 'entregando';
+                    $pedido->timestamps = false;
+                    $pedido->save();
+                }
+            }
+        }
+    }
+
+    /**
+     * Devuelve el historial de pedidos del usuario logueado.
+     */
     public function misPedidos(Request $request)
     {
         $pedidos = Order::where('user_id', $request->user()->id)
@@ -22,6 +45,7 @@ class PedidoController extends Controller
                         ->latest()  
                         ->paginate(5);
 
+        $this->sincronizarEstadosPedidos($pedidos->items());
 
         return response()->json([
             'message' => 'Historial de pedidos recuperado con éxito.',
@@ -68,9 +92,11 @@ class PedidoController extends Controller
             ], 404);
         }
 
-        if ($pedido->estado !== 'enviado') {
+        $this->sincronizarEstadosPedidos([$pedido]);
+
+        if ($pedido->estado !== 'entregado' && $pedido->estado !== 'enviado') {
             return response()->json([
-                'message' => 'Solo se pueden devolver pedidos que ya han sido enviados.'
+                'message' => 'Solo se pueden devolver pedidos que ya han sido entregados.'
             ], 400);
         }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -47,6 +48,7 @@ public function calcularTallaIdeal(Request $request)
     }
 
     return response()->json([
+        'talla' => $tallaRecomendada,
         'talla_recomendada' => $tallaRecomendada,
         'mensaje' => "Basado en tus medidas y preferencia, te recomendamos la talla $tallaRecomendada."
     ]);
