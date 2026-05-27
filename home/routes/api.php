@@ -16,15 +16,16 @@ use App\Http\Controllers\Api\AdminOutfitWizardController;
 use App\Http\Controllers\OutfitWizardController;
 use App\Http\Controllers\Api\OutfitController;
 
-
-
-Route::get('/productos/{id}/recomendados', [ProductoController::class, 'recomendados']);
 // Rutas Públicas de Outfit
 Route::post('/generar-outfit', [OutfitController::class, 'generarImagenOutfit']);
 
 // Rutas Públicas de Productos
 Route::get('/productos', [ProductoController::class, 'index']);
 Route::get('/productos/{slug}', [ProductoController::class, 'show']);
+Route::get('/productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
+
+// Ruta pública para obtener recomendaciones de productos relacionados a una prenda específica.
+Route::get('/productos/{id}/recomendados', [ProductoController::class, 'recomendados']);
 Route::get('/resenas-pagina', [ResenaPaginaController::class, 'index']);
 Route::post('/resenas-pagina', [ResenaPaginaController::class, 'store']);
 
@@ -45,9 +46,6 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 // Autenticación Social (Google)
 Route::get('/auth/google/redirect', [SocialAuthController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [SocialAuthController::class, 'handleGoogleCallback']);
-
-Route::get('/productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
-
 
 // Rutas Privadas (Requieren Autenticación)
 Route::middleware('auth:sanctum')->group(function () {

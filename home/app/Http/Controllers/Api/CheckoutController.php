@@ -199,6 +199,24 @@ class CheckoutController extends Controller
 
             Mail::to($order->user->email)->send(new ConfirmacionCompra($order));
 
+            // Si el usuario está suscrito a la newsletter, seleccionamos productos recomendados y le enviamos un correo personalizado.
+            if ($order->user->newsletter) {
+                // Evitamos recomendar productos que el usuario acaba de comprar en este pedido.
+                $boughtProductIds = $order->orderItems->pluck('producto_id')->toArray();
+                
+                // Obtenemos hasta 3 productos aleatorios disponibles en stock para recomendar.
+                $recomendaciones = \App\Models\Producto::where('stock', '>', 0)
+                    ->whereNotIn('id', $boughtProductIds)
+                    ->inRandomOrder()
+                    ->take(3)
+                    ->get();
+                
+                if ($recomendaciones->isNotEmpty()) {
+                    $frontend_url = env('FRONTEND_URL', 'https://outfitgo.duckdns.org');
+                    Mail::to($order->user->email)->send(new \App\Mail\RecomendacionNewsletterMail($order->user, $recomendaciones, $frontend_url));
+                }
+            }
+
             return response()->json([
                 'message' => '¡Pago verificado y compra completada con éxito!',
                 'order' => $order

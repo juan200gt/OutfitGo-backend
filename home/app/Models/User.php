@@ -26,6 +26,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_active',
         'google_id',
         'avatar',
+        // Permitir la asignación masiva de la suscripción a la newsletter.
+        'newsletter',
     ];
     
     /**
@@ -64,6 +66,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            // Castear el campo de la newsletter como booleano de forma automática.
+            'newsletter' => 'boolean',
         ];
     }
 

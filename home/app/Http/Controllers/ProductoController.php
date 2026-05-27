@@ -98,9 +98,7 @@ class ProductoController extends Controller
                 'tallas' => $tallasDisponibles,
             ]
         ]);
-    }
-
-    public function show($slug)
+    }    public function show($slug)
     {
         $producto = Producto::where('slug', $slug)
             ->with(['marca', 'categoria', 'tallas', 'colores', 'imagenes', 'variantes.talla', 'variantes.color', 'resenas.user:id,name'])
@@ -129,17 +127,31 @@ class ProductoController extends Controller
             'precios' => $historial->map(fn($h) => (float) $h->precio)
         ]);
     }
+
+    // Obtiene una lista de productos recomendados (de la misma categoría o aleatorios si no hay suficientes) para mostrar en el detalle de producto.
     public function recomendados($id)
     {
-        $productoActual = Producto::findOrFail($id);
+        $producto = Producto::findOrFail($id);
 
-        $recomendados = Producto::where('categoria_id', $productoActual->categoria_id)
-            ->where('id', '!=', $id)
+        $recomendados = Producto::where('categoria_id', $producto->categoria_id)
+            ->where('id', '!=', $producto->id)
+            ->where('stock', '>', 0)
+            ->with(['marca', 'categoria', 'tallas', 'colores', 'imagenes'])
             ->inRandomOrder()
-            ->limit(4)
+            ->take(4)
             ->get();
 
+        if ($recomendados->count() < 4) {
+            $otros = Producto::where('id', '!=', $producto->id)
+                ->whereNotIn('id', $recomendados->pluck('id'))
+                ->where('stock', '>', 0)
+                ->with(['marca', 'categoria', 'tallas', 'colores', 'imagenes'])
+                ->inRandomOrder()
+                ->take(4 - $recomendados->count())
+                ->get();
+            $recomendados = $recomendados->concat($otros);
+        }
 
-        return response()->json($recomendados, 200);
+        return response()->json($recomendados);
     }
 }

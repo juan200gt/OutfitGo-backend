@@ -31,6 +31,8 @@ class AuthController extends Controller
             'provincia' => $request->provincia,
             'telefono' => $request->telefono,   
             'is_active' => true,
+            // Registrar si el usuario marco la casilla de la newsletter al registrarse
+            'newsletter' => $request->boolean('newsletter'),
         ]);
 
         // Disparar el evento de registro (esto envía el correo de verificación si MustVerifyEmail está implementado)
