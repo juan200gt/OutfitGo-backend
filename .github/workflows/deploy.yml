@@ -76,7 +76,7 @@ jobs:
             grep -q "^GEMINI_API_KEY=" .env && sed -i "s|^GEMINI_API_KEY=.*|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|" .env || echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
 
             grep -q "^DB_HOST=" .env && sed -i "s|^DB_HOST=.*|DB_HOST=${{ secrets.RDS_HOST }}|" .env || echo "DB_HOST=${{ secrets.RDS_HOST }}" >> .env
-            grep -q "^DB_DATABASE=" .env && sed -i "s|^DB_DATABASE=.*|DB_DATABASE=outfitgo|" .env || echo "DB_DATABASE=outfitgo" >> .env
+            grep -q "^DB_DATABASE=" .env && sed -i "s|^DB_DATABASE=.*|DB_DATABASE=laravel|" .env || echo "DB_DATABASE=laravel" >> .env
             grep -q "^DB_USERNAME=" .env && sed -i "s|^DB_USERNAME=.*|DB_USERNAME=admin|" .env || echo "DB_USERNAME=admin" >> .env
             grep -q "^DB_PASSWORD=" .env && sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.RDS_PASSWORD }}|" .env || echo "DB_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
 
