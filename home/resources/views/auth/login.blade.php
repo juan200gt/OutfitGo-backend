@@ -22,7 +22,7 @@
                 </a>
             </div>
 
-            <form action="{{ route('admin.logout') }}" method="POST" class="mt-6">
+            <form action="{{ route('logout') }}" method="POST" class="mt-6">
                 @csrf
                 <button type="submit" class="w-full text-center bg-gray-200 text-gray-700 font-semibold py-2 rounded hover:bg-gray-300 transition">Cerrar Sesión</button>
             </form>
@@ -41,7 +41,7 @@
                 @csrf
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-                    <input type="email" name="email" class="w-full border p-2 rounded" placeholder="administrador@gmail.com" required>
+                    <input type="email" name="email" class="w-full border p-2 rounded" placeholder="administrador@gmail.com" required value="{{ old('email') }}">
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Contraseña</label>

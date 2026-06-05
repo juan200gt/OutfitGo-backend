@@ -34,6 +34,10 @@ class AppServiceProvider extends ServiceProvider
         }
         Producto::observe(ProductoObserver::class);
 
+        \Illuminate\Support\Facades\Blade::directive('currency', function ($expression) {
+            return "<?php echo number_format($expression, 2, ',', '.') . ' €'; ?>";
+        });
+
         VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
             return (new MailMessage)
                 ->subject('Verifica tu correo electrónico')

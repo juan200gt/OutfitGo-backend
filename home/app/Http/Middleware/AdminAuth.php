@@ -13,7 +13,7 @@ class AdminAuth
     {
         // Si NO está autenticado en la base de datos
         if (!Auth::check()) {
-            return redirect('/admin/login');
+            return redirect()->route('login');
         }
         
         $rol = Auth::user()->rol;
@@ -22,6 +22,6 @@ class AdminAuth
             return $next($request);
         }
         
-        return redirect('/admin/login')->withErrors(['email' => 'Acceso denegado: Se requieren privilegios de administración.']);
+        return redirect()->route('login')->withErrors(['email' => 'Acceso denegado: Se requieren privilegios de administración.']);
     }
 }

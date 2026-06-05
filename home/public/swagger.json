@@ -1,0 +1,60 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "OutfitGo API Documentation",
+    "version": "1.0.0",
+    "description": "Documentación mínima de la API para OutfitGo."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/api/productos": {
+      "get": {
+        "summary": "Obtener catálogo de productos",
+        "description": "Retorna un listado paginado de los productos disponibles.",
+        "responses": {
+          "200": {
+            "description": "Listado de productos exitoso."
+          }
+        }
+      }
+    },
+    "/api/generar-outfit": {
+      "post": {
+        "summary": "Generar imagen de outfit con IA",
+        "description": "Genera una propuesta de outfit con IA a partir de los IDs de prendas proporcionados.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "product_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "IDs de los productos a combinar"
+                  }
+                },
+                "required": ["product_ids"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Outfit generado con éxito."
+          },
+          "400": {
+            "description": "Petición incorrecta o IDs no proporcionados."
+          }
+        }
+      }
+    }
+  }
+}
