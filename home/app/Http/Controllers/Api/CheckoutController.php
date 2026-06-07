@@ -103,6 +103,7 @@ class CheckoutController extends Controller
                 'payment_method_types' => ['card'],
                 'line_items'           => $line_items,
                 'mode'                 => 'payment',
+                'customer_email'       => $user->email,
                 'metadata'             => [
                     'order_id' => $order->id 
                 ],
