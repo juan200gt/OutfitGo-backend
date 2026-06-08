@@ -1,37 +1,46 @@
-# 🚀 E-Commerce Backend v2.0 | Core Engine
+# 🚀 E-Commerce Backend v2.0 | Core Engine (OutfitGo)
 
 ![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/CI/CD-GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
-Este proyecto ha evolucionado de un agregador de precios a un **sistema de E-commerce directo** altamente escalable, optimizado para una integración fluida con Angular y desplegado en la nube de AWS.
-
-## 🛠️ Especificaciones Técnicas Actuales
-
-| Característica | Estado Actual |
-| :--- | :--- |
-| **Modelo de Negocio** | **E-Commerce Directo**. Productos con precio y stock propio. |
-| **Segmentación** | **Filtro por Público**: Adulto, Infantil, Unisex (vía Enum). |
-| **Calidad de Contenido** | **Descripciones Estrictas**: Longitud controlada entre 300 y 500 caracteres. |
-| **Optimización API** | **Eager Loading**: Carga eficiente de Categoría, Tallas y Colores en un solo request. |
-| **Infraestructura** | **Cloud Native**: Contenedores Docker en Amazon EC2 con CI/CD automatizado. |
+Este repositorio contiene el **Core Engine del Backend** para la tienda online **OutfitGo**, construido sobre Laravel 11. Está estructurado como una API RESTful desacoplada para dar servicio al Frontend en Angular 19 y se encuentra desplegado de forma segura en la nube de AWS.
 
 ---
 
-## 🏗️ Arquitectura de Datos
+## 📚 Índice de Documentación Consolidada
 
-El sistema utiliza una estructura relacional optimizada para ropa y calzado, permitiendo una gestión precisa de variantes.
+Para consultar el manual específico de cada área del proyecto, accede a las siguientes guías unificadas:
 
-Puedes consultar el diagrama gráfico y el diccionario completo de las tablas en el documento de documentación del esquema:
-👉 **[Esquema Entidad-Relación (E/R)](file:///c:/Users/AGasesores/Documents/GitHub/Backend-OutfitGo/ESQUEMA_ER.md)**.
+1.  👉 **[Guía de Integración de API (Frontend Angular)](file:///d:/Mis%20Datos/Documentos/GitHub/Backend/docs/API_INTEGRATION_GUIDE.md)**: Lista completa de endpoints (Catálogo, Auth Sanctum, Carrito, Stripe Checkout y Testimonios), formatos JSON de petición/respuesta y reglas críticas que la UI debe cumplir.
+2.  👉 **[Manual de Desarrollo Interno (Desarrolladores Backend)](file:///d:/Mis%20Datos/Documentos/GitHub/Backend/docs/INTERNAL_DEVELOPMENT.md)**: Estructura del proyecto, convenciones de base de datos, lógica transaccional de compras, observadores para alertas de stock y funcionamiento interno del panel de administración.
+3.  👉 **[Guía de Despliegue y Operaciones (DevOps)](file:///d:/Mis%20Datos/Documentos/GitHub/Backend/docs/DEPLOYMENT_GUIDE.md)**: Pipelines de CI/CD automatizados con GitHub Actions, configuración de variables de producción y diseño detallado del Balanceador de Carga EC2 (Nginx).
+
+---
+
+## 🛠️ Especificaciones Técnicas
+
+| Característica | Estado / Detalle |
+| :--- | :--- |
+| **Modelo de Negocio** | **E-Commerce Directo**. Productos con precio y stock propio en inventario. |
+| **Segmentación** | **Filtros por Público**: Adulto, Infantil, Unisex (mediante Enum de BD). |
+| **Calidad de Contenido** | **Descripciones Estrictas**: Longitud obligatoria de entre 300 y 500 caracteres. |
+| **Optimización de Consultas**| **Eager Loading**: Carga conjunta de Categoría, Tallas, Colores y Marcas en un único query. |
+| **Infraestructura** | **Cloud Native**: Dockerizados y desplegados en instancias AWS EC2 con base de datos RDS. |
+
+---
 
 ## 📋 Requisitos Previos
 
-*   [Docker Desktop](https://www.docker.com/products/docker-desktop) instalado y ejecutándose.
+*   [Docker Desktop](https://www.docker.com/products/docker-desktop) instalado y en ejecución en tu máquina local.
 *   Git.
 
-## 🛠️ Instalación y Puesta en Marcha
+---
+
+## 🛠️ Instalación y Arranque en Local (Docker)
+
+Sigue estos comandos para inicializar el entorno de desarrollo local con Docker Compose:
 
 1.  **Clonar el repositorio**:
     ```bash
@@ -39,171 +48,47 @@ Puedes consultar el diagrama gráfico y el diccionario completo de las tablas en
     cd Backend
     ```
 
-2.  **Iniciar los contenedores Docker**:
-    Levanta el entorno de base de datos y aplicación.
+2.  **Iniciar los contenedores Docker en segundo plano**:
     ```bash
     docker compose up -d
     ```
 
-3.  **Configuración Inicial (Solo la primera vez)**:
-    Instala dependencias y configura la base de datos dentro del contenedor `laravel`.
+3.  **Configuración inicial (Solo la primera vez)**:
+    Instala las dependencias y ejecuta las migraciones necesarias dentro del contenedor de la aplicación:
     ```bash
-    # Instalar dependencias de PHP
+    # Instalar dependencias de Composer (PHP)
     docker exec laravel composer install
 
-    # Copiar archivo de entorno y generar clave
+    # Crear archivo .env local y generar clave de cifrado
     docker exec laravel php -r "file_exists('.env') || copy('.env.example', '.env');"
     docker exec laravel php artisan key:generate
 
-    # Ejecutar migraciones (crea tablas de productos, tallas, colores, etc.)
+    # Ejecutar las migraciones (creación de tablas)
     docker exec laravel php artisan migrate
     ```
 
-4.  **Verificar estado**:
-    Accede a `http://localhost:8000` para ver la página de bienvenida de Laravel.
+4.  **Verificar el estado de la aplicación**:
+    Abre tu navegador en `http://localhost:8000`. Debería cargar la página de bienvenida de Laravel o la respuesta base de la API.
 
-## 📡 Documentación de la API
+---
 
-La API se divide en zonas públicas para el catálogo y zonas privadas protegidas mediante Laravel Sanctum (Bearer Tokens).
+## 🧪 Comandos Útiles de Mantenimiento
 
-### 📦 Catálogo de Productos (Público)
-- `GET /api/productos`: Listado paginado (12 items) con carga de relaciones (tallas, colores, marcas).
-- `GET /api/productos/{slug}`: Detalle completo de un producto específico.
-- `GET /api/productos?publico=infantil`: Filtrado avanzado y segmentado.
+*   **Poblar la Base de Datos con Datos Ficticios (Seeders)**:
+    Si deseas limpiar el catálogo y generar productos de prueba aleatorios con descripciones coherentes:
+    ```bash
+    docker exec laravel php artisan migrate:fresh --seed
+    ```
+*   **Ejecutar los Tests Unitarios y de Integración (PHPUnit)**:
+    ```bash
+    docker exec laravel php artisan test
+    ```
 
-**Ejemplo de respuesta JSON (`GET /api/productos`):**
-```json
-{
-    "current_page": 1,
-    "data": [
-        {
-            "id": 1,
-            "nombre": "Zapatillas Runner",
-            "slug": "zapatillas-runner",
-            "precio": 99.99,
-            "stock": 10,
-            "marca": { "id": 2, "nombre": "Adidas" },
-            "tallas": [ { "nombre": "42" }, { "nombre": "43" } ],
-            "colores": [ { "nombre": "Negro", "hex_code": "#000000" } ]
-        }
-    ],
-    "total": 50
-}
-```
+---
 
-### Parámetros de Búsqueda para `GET /api/productos`
-Soporta los siguientes parámetros de consulta (query params):
+## 📂 Estructura de Directorios
 
-| Parámetro | Descripción | Ejemplo |
-| :--- | :--- | :--- |
-| `q` | Búsqueda por texto (nombre o descripción). | `?q=Nike` |
-| `marca_id` | ID de la marca. | `?marca_id=1` |
-| `categoria_id` | ID de la categoría. | `?categoria_id=5` |
-| `talla` | Filtrar por nombres de talla (separados por coma). | `?talla=M,L` |
-| `color` | Filtrar por nombres de color (separados por coma). | `?color=Rojo,Azul` |
-| `precio_min` | Precio mínimo. | `?precio_min=50` |
-| `precio_max` | Precio máximo. | `?precio_max=150` |
-| `publico` | Filtrar por audiencia objetivo. | `?publico=infantil` |
-
-### `GET /api/productos/{slug}`
-Obtiene el detalle completo de un producto específico por su URL amigable (slug).
-
-**Ejemplo de respuesta JSON (`GET /api/productos/{slug}`):**
-```json
-{
-    "id": 1,
-    "nombre": "Zapatillas Runner",
-    "slug": "zapatillas-runner",
-    "descripcion": "Zapatillas ideales para running.",
-    "precio": 99.99,
-    "stock": 10,
-    "marca": { "id": 2, "nombre": "Adidas" },
-    "categoria": { "id": 5, "nombre": "Calzado Deportivo" },
-    "tallas": [ { "id": 1, "nombre": "42" } ],
-    "colores": [ { "id": 1, "nombre": "Negro", "hex_code": "#000000" } ]
-}
-```
-
-### 🔑 Autenticación de Usuarios (Sanctum)
-- `POST /api/register`: Creado de cuenta nueva (requiere `name`, `email`, `password`).
-- `POST /api/login`: Inicio de sesión, retorna el token de acceso.
-- `POST /api/logout`: Cierre de sesión y revocación del token (Requiere Auth).
-- `GET /api/user`: Obtener los datos del usuario logueado (Requiere Auth).
-
-**Ejemplo de respuesta JSON (`POST /api/login`):**
-```json
-{
-    "user": {
-        "id": 1,
-        "name": "Juan Perez",
-        "email": "juan@example.com"
-    },
-    "token": "1|LaravelSanctumTokenExample..."
-}
-```
-
-### 🛒 Carrito de Compras (Requiere Auth)
-- `GET /api/cart`: Listar ítems actuales en el carrito del usuario.
-- `POST /api/cart`: Añadir un producto al carrito (requiere `producto_id`, `cantidad`, y opcionalmente `talla_id`, `color_id`).
-- `DELETE /api/cart/{id}`: Eliminar un ítem específico del carrito.
-
-**Ejemplo de respuesta JSON (`GET /api/cart`):**
-```json
-{
-    "data": [
-        {
-            "id": 1,
-            "producto": {
-                "id": 5,
-                "nombre": "Camiseta Básica",
-                "precio": 19.99
-            },
-            "cantidad": 2,
-            "talla": { "nombre": "M" },
-            "color": { "nombre": "Blanco" },
-            "subtotal": 39.98
-        }
-    ],
-    "total_cart": 39.98
-}
-```
-
-### 💳 Checkout y Pedidos (Requiere Auth)
-- `POST /api/checkout`: Procesar carrito actual generando un nuevo Pedido (`Order`), restando inventario y vaciando el carrito en el proceso.
-
-**Ejemplo de respuesta JSON (`POST /api/checkout`):**
-```json
-{
-    "message": "Pedido realizado con éxito",
-    "order": {
-        "id": 101,
-        "user_id": 1,
-        "total": 39.98,
-        "status": "pending",
-        "created_at": "2026-03-10T12:00:00.000000Z"
-    }
-}
-```
-
-## ✅ Tests
-
-El proyecto incluye tests automatizados (PHPUnit) que se ejecutan en cada Push mediante GitHub Actions.
-
-Para ejecutar los tests localmente:
-```bash
-docker exec laravel php artisan test
-```
-
-## 📂 Estructura del Proyecto
-
-*   `home/`: Código fuente de Laravel.
-*   `docker-compose.yaml`: Configuración de servicios Docker.
-*   `.github/workflows/`: Configuración de CI/CD.
-
-## 🚀 Despliegue y Mantenimiento
-
-### Actualización de Base de Datos
-Para resetear el entorno y poblarlo con datos de prueba coherentes (Seeders actualizados):
-```bash
-docker exec laravel php artisan migrate:fresh --seed
-```
+*   `home/`: Código fuente de la aplicación Laravel.
+*   `docs/`: Guías de integración de API, desarrollo interno y operaciones.
+*   `docker/`: Archivos de configuración de Nginx y contenedores para producción.
+*   `docker-compose.yaml`: Configuración de servicios locales (Laravel y base de datos).
