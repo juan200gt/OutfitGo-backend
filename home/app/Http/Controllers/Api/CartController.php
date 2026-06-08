@@ -105,6 +105,72 @@ class CartController extends Controller
     }
 
     /**
+     * Sincronizar el carrito de invitado con la base de datos al iniciar sesión.
+     */
+    public function sync(Request $request)
+    {
+        $request->validate([
+            'items' => ['required', 'array'],
+            'items.*.producto_id' => ['required', 'exists:productos,id'],
+            'items.*.color' => ['required', 'string'],
+            'items.*.talla' => ['required', 'string'],
+            'items.*.cantidad' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $user = $request->user();
+
+        foreach ($request->items as $item) {
+            // Buscamos la variante exacta en la base de datos
+            $variante = ProductoVariante::where('producto_id', $item['producto_id'])
+                ->whereHas('color', function($q) use ($item) {
+                    $q->where('nombre', $item['color']);
+                })
+                ->whereHas('talla', function($q) use ($item) {
+                    $q->where('nombre', $item['talla']);
+                })
+                ->first();
+
+            if (!$variante) {
+                continue;
+            }
+
+            $cantidadAAgregar = $item['cantidad'];
+
+            $cartItem = CartItem::where('user_id', $user->id)
+                ->where('producto_variante_id', $variante->id)
+                ->first();
+
+            if ($cartItem) {
+                $nuevaCantidad = $cartItem->cantidad + $cantidadAAgregar;
+                if ($variante->stock < $nuevaCantidad) {
+                    $nuevaCantidad = $variante->stock;
+                }
+                $cartItem->update(['cantidad' => $nuevaCantidad]);
+            } else {
+                if ($variante->stock < $cantidadAAgregar) {
+                    $cantidadAAgregar = $variante->stock;
+                }
+                if ($cantidadAAgregar > 0) {
+                    CartItem::create([
+                        'user_id' => $user->id,
+                        'producto_variante_id' => $variante->id,
+                        'cantidad' => $cantidadAAgregar,
+                    ]);
+                }
+            }
+        }
+
+        $cartItems = CartItem::with(['variante.producto', 'variante.color', 'variante.talla'])
+            ->where('user_id', $user->id)
+            ->get();
+
+        return response()->json([
+            'message' => 'Carrito sincronizado exitosamente',
+            'data' => CartItemResource::collection($cartItems),
+        ]);
+    }
+
+    /**
      * Eliminar un item del carrito.
      */
     public function destroy(Request $request, $id)

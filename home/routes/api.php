@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Carrito de Compras
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart', [CartController::class, 'store']);
+    Route::post('/cart/sync', [CartController::class, 'sync']);
     Route::patch('/cart/{id}', [CartController::class, 'update']);
     Route::delete('/cart/{id}', [CartController::class, 'destroy']);
 
@@ -70,6 +71,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 2. Para confirmar la orden en la BD una vez pagado
     Route::post('/checkout/confirmar', [CheckoutController::class, 'confirmarPago']);
+
+    // 3. Para validar un cupón de descuento
+    Route::post('/cupon/validar', [CheckoutController::class, 'validarCupon']);
 
 
 
