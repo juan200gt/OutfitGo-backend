@@ -12,7 +12,7 @@ Route::get('/catalogo', [ProductoController::class, 'index'])->name('productos.i
 Route::get('/producto/{slug}', [ProductoController::class, 'show'])->name('productos.show');
 
 // Redireccionar login antiguo de admin al login de Breeze
-Route::redirect('/admin/login', '/login');
+Route::redirect('/admin/login', '/admin/login');
 
 // Ruta de compatibilidad para dashboard requerida por tests de Breeze
 Route::get('/dashboard', function () {
