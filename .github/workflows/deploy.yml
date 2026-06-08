@@ -80,7 +80,7 @@ jobs:
             # 4. Arreglo de permisos y Limpieza de caché
             sudo chown -R ubuntu:www-data home/storage home/bootstrap/cache
             sudo chmod -R 775 home/storage home/bootstrap/cache
-            sudo docker compose exec -T app php artisan config:clear
+            sudo docker compose exec -T app php artisan optimize:clear
             sudo docker compose exec -T app php artisan key:generate --force
 
             # 5. Base de datos: Migración
