@@ -21,7 +21,10 @@ Este proyecto ha evolucionado de un agregador de precios a un **sistema de E-com
 
 ## 🏗️ Arquitectura de Datos
 
-El sistema utiliza una estructura relacional optimizada para ropa y calzado, permitiendo una gestión precisa de variantes:
+El sistema utiliza una estructura relacional optimizada para ropa y calzado, permitiendo una gestión precisa de variantes.
+
+Puedes consultar el diagrama gráfico y el diccionario completo de las tablas en el documento de documentación del esquema:
+👉 **[Esquema Entidad-Relación (E/R)](file:///c:/Users/AGasesores/Documents/GitHub/Backend-OutfitGo/ESQUEMA_ER.md)**.
 
 ## 📋 Requisitos Previos
 
