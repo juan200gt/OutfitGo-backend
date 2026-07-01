@@ -49,4 +49,18 @@ return [
             'url' => env('CLOUDINARY_URL'),
         ],
 
+        'groq' => [
+            'api_key' => env('GROQ_API_KEY'),
+        ],
+
+        'gemini' => [
+            'api_key' => env('GEMINI_API_KEY'),
+        ],
+
+        'replicate' => [
+            'api_token' => env('REPLICATE_API_TOKEN'),
+        ],
+
+        'motor_ia' => env('MOTOR_IA', 'groq'),
+
     ];

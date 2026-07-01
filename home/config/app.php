@@ -123,4 +123,24 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | The URL of the frontend SPA application. Used for redirects,
+    | email verification links, and CORS configuration.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:4200'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | CORS Allowed Origins
+    |--------------------------------------------------------------------------
+    */
+
+    'cors_allowed_origins' => array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:4200')))),
+
 ];
