@@ -7,6 +7,7 @@ use App\Models\CartItem;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
 use App\Mail\ConfirmacionCompra;
@@ -17,13 +18,14 @@ class CheckoutController extends Controller
 {
     public function iniciarPago(Request $request)
     {
-        // 1. Validamos que Angular nos manda la dirección Y los productos
+        // 1. Validamos que Angular nos manda la dirección, los productos y el código opcional del cupón
         $request->validate([
             'address_id' => 'required|integer',
             'productos' => 'required|array|min:1',
             // Aseguramos que cada producto traiga su ID de variante y la cantidad
             'productos.*.producto_variante_id' => 'required|integer', 
             'productos.*.cantidad' => 'required|integer|min:1',
+            'coupon_code' => 'nullable|string',
         ]);
 
         /** @var \App\Models\User $user */
@@ -34,14 +36,48 @@ class CheckoutController extends Controller
         $orderItemsData = [];
         $line_items = [];
 
-        // 2. Recorremos lo que manda Angular, pero BUSCAMOS EL PRECIO REAL en la BD por seguridad
+        // 2. Primero calculamos el total bruto buscando el precio real en la base de datos
         foreach ($request->productos as $item) {
-            $variante = ProductoVariante::with(['producto', 'color', 'talla'])
-                        ->find($item['producto_variante_id']);
+            $variante = ProductoVariante::with(['producto'])->find($item['producto_variante_id']);
 
             if (!$variante) {
                 return response()->json(['message' => 'Error: Una de las prendas ya no está disponible.'], 422);
             }
+
+            $total += $variante->producto->precio * $item['cantidad'];
+        }
+
+        // 3. Calculamos el descuento si se proporcionó un cupón válido
+        $descuentoFijo = 0;
+        $descuentoPorcentaje = 0;
+        if ($request->filled('coupon_code')) {
+            $cupon = \App\Models\Cupon::where('codigo', strtoupper($request->coupon_code))
+                ->where('is_active', true)
+                ->first();
+            if ($cupon) {
+                if ($cupon->tipo === 'porcentaje') {
+                    $descuentoPorcentaje = $cupon->valor;
+                } elseif ($cupon->tipo === 'fijo') {
+                    $descuentoFijo = $cupon->valor;
+                }
+            }
+        }
+
+        $descuentoAplicado = 0;
+        if ($descuentoPorcentaje > 0) {
+            $descuentoAplicado = $total * ($descuentoPorcentaje / 100);
+        } elseif ($descuentoFijo > 0) {
+            $descuentoAplicado = min($descuentoFijo, $total);
+        }
+
+        // Reducimos el total y calculamos el factor de descuento para aplicarlo a cada prenda individualmente
+        $total = $total - $descuentoAplicado;
+        $descuentoFactor = ($total + $descuentoAplicado) > 0 ? ($total / ($total + $descuentoAplicado)) : 1;
+
+        // 4. Recorremos nuevamente para validar el stock y preparar los items para la orden y Stripe
+        foreach ($request->productos as $item) {
+            $variante = ProductoVariante::with(['producto', 'color', 'talla'])
+                        ->find($item['producto_variante_id']);
 
             if ($variante->stock < $item['cantidad']) {
                 return response()->json([
@@ -49,17 +85,17 @@ class CheckoutController extends Controller
                 ], 422);
             }
 
-            // Calculamos el total con el precio real de la BD
-            $total += $variante->producto->precio * $item['cantidad'];
+            // Aplicamos el factor de descuento al precio unitario para que cuadre con el total final
+            $precioUnitarioDescontado = $variante->producto->precio * $descuentoFactor;
 
             $orderItemsData[] = [
                 'producto_id'          => $variante->producto_id,
                 'producto_variante_id' => $variante->id,
                 'cantidad'             => $item['cantidad'],
-                'precio_unitario'      => $variante->producto->precio,
+                'precio_unitario'      => $precioUnitarioDescontado,
             ];
 
-            $unit_amount = (int) round($variante->producto->precio * 100);
+            $unit_amount = (int) round($precioUnitarioDescontado * 100);
             $line_items[] = [
                 'price_data' => [
                     'currency' => 'eur',
@@ -75,9 +111,8 @@ class CheckoutController extends Controller
         try {
             DB::beginTransaction();
 
-            // 3. Creamos el pedido
-            $order = Order::create([
-                'user_id'       => $user->id,
+            // 3. Creamos el pedido - user_id se asigna directamente, no por mass assignment
+            $order = new Order([
                 'total'         => $total,
                 'estado'        => 'pendiente',
                 'nombre'        => $user->name,
@@ -89,6 +124,8 @@ class CheckoutController extends Controller
                 'codigo_postal' => $address->codigo_postal,
                 'notas'         => $request->notas ?? '',
             ]);
+            $order->user_id = $user->id;
+            $order->save();
 
             // 4. Guardamos los items del pedido que preparamos antes
             foreach ($orderItemsData as $data) {
@@ -97,7 +134,7 @@ class CheckoutController extends Controller
 
             // 5. Llamamos a Stripe
             Stripe::setApiKey(config('services.stripe.secret'));
-            $frontend_url = env('FRONTEND_URL', 'https://outfitgo.duckdns.org');
+            $frontend_url = config('app.frontend_url', 'https://outfitgo.duckdns.org');
 
             $checkout_session = Session::create([
                 'payment_method_types' => ['card'],
@@ -117,7 +154,8 @@ class CheckoutController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error al preparar el pago: ' . $e->getMessage()], 500);
+            Log::error('Error al preparar el pago', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Error al preparar el pago. Inténtalo de nuevo más tarde.'], 500);
         }
     }
 
@@ -172,15 +210,18 @@ class CheckoutController extends Controller
 
             DB::beginTransaction();
 
+            // Bloqueo pesimista para evitar race conditions de stock
             foreach ($order->orderItems as $item) {
-                if (!$item->variante) {
+                $variante = ProductoVariante::lockForUpdate()->find($item->producto_variante_id);
+
+                if (!$variante) {
                     DB::rollBack();
                     return response()->json([
                         'message' => 'No se puede confirmar el pedido: una variante ya no existe.'
                     ], 422);
                 }
 
-                if ($item->variante->stock < $item->cantidad) {
+                if ($variante->stock < $item->cantidad) {
                     DB::rollBack();
                     return response()->json([
                         'message' => 'No se puede confirmar el pedido: stock insuficiente en una variante.'
@@ -191,31 +232,36 @@ class CheckoutController extends Controller
             $order->update(['estado' => 'pagado']);
 
             foreach ($order->orderItems as $item) {
-                $item->variante->decrement('stock', $item->cantidad);
+                ProductoVariante::where('id', $item->producto_variante_id)
+                    ->decrement('stock', $item->cantidad);
             }
 
             CartItem::where('user_id', $order->user_id)->delete();
 
             DB::commit();
 
-            Mail::to($order->user->email)->send(new ConfirmacionCompra($order));
+            try {
+                Mail::to($order->user->email)->send(new ConfirmacionCompra($order));
 
-            // Si el usuario está suscrito a la newsletter, seleccionamos productos recomendados y le enviamos un correo personalizado.
-            if ($order->user->newsletter) {
-                // Evitamos recomendar productos que el usuario acaba de comprar en este pedido.
-                $boughtProductIds = $order->orderItems->pluck('producto_id')->toArray();
-                
-                // Obtenemos hasta 3 productos aleatorios disponibles en stock para recomendar.
-                $recomendaciones = \App\Models\Producto::where('stock', '>', 0)
-                    ->whereNotIn('id', $boughtProductIds)
-                    ->inRandomOrder()
-                    ->take(3)
-                    ->get();
-                
-                if ($recomendaciones->isNotEmpty()) {
-                    $frontend_url = env('FRONTEND_URL', 'https://outfitgo.duckdns.org');
-                    Mail::to($order->user->email)->send(new \App\Mail\RecomendacionNewsletterMail($order->user, $recomendaciones, $frontend_url));
+                // Si el usuario está suscrito a la newsletter, seleccionamos productos recomendados y le enviamos un correo personalizado.
+                if ($order->user->newsletter) {
+                    // Evitamos recomendar productos que el usuario acaba de comprar en este pedido.
+                    $boughtProductIds = $order->orderItems->pluck('producto_id')->toArray();
+                    
+                    // Obtenemos hasta 3 productos aleatorios disponibles en stock para recomendar.
+                    $recomendaciones = \App\Models\Producto::where('stock', '>', 0)
+                        ->whereNotIn('id', $boughtProductIds)
+                        ->inRandomOrder()
+                        ->take(3)
+                        ->get();
+                    
+                    if ($recomendaciones->isNotEmpty()) {
+                        $frontend_url = config('app.frontend_url', 'https://outfitgo.duckdns.org');
+                        Mail::to($order->user->email)->send(new \App\Mail\RecomendacionNewsletterMail($order->user, $recomendaciones, $frontend_url));
+                    }
                 }
+            } catch (\Exception $e) {
+                Log::warning('No se pudo enviar el correo de confirmación de compra', ['error' => $e->getMessage()]);
             }
 
             return response()->json([
@@ -227,7 +273,8 @@ class CheckoutController extends Controller
             if (DB::transactionLevel() > 0) {
                 DB::rollBack();
             }
-            return response()->json(['message' => 'Error al verificar el pago: ' . $e->getMessage()], 500);
+            Log::error('Error al verificar el pago', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Error al verificar el pago. Inténtalo de nuevo más tarde.'], 500);
         }
     }
 }
