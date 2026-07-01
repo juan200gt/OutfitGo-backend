@@ -137,8 +137,25 @@ class ProductoController extends Controller
         // 1. Buscamos el producto
         $producto = Producto::findOrFail($id);
 
-        // 2. Recogemos los datos del formulario (excluimos la galería para tratarla manual)
-        $datosActualizar = $request->except(['imagen', '_token', '_method', 'tallas', 'colores', 'galeria_nuevas']);
+        // 2. Validamos los datos del formulario
+        $datosActualizar = $request->validate([
+            'nombre' => 'sometimes|string|max:255',
+            'nombre_en' => 'nullable|string|max:255',
+            'nombre_fr' => 'nullable|string|max:255',
+            'descripcion' => 'nullable|string',
+            'descripcion_en' => 'nullable|string',
+            'descripcion_fr' => 'nullable|string',
+            'precio' => 'sometimes|numeric|min:0',
+            'stock' => 'sometimes|integer|min:0',
+            'publico' => 'sometimes|in:hombre,mujer,infantil,unisex',
+            'marca_id' => 'sometimes|integer|exists:marcas,id',
+            'categoria_id' => 'sometimes|integer|exists:categorias,id',
+            'imagen' => 'nullable|image|max:2048',
+            'galeria_nuevas.*' => 'nullable|image|max:2048',
+        ]);
+
+        // Quitamos campos que se gestionan aparte
+        unset($datosActualizar['imagen'], $datosActualizar['galeria_nuevas']);
 
         // 3. Si el usuario ha subido una imagen nueva lo guardamos
         if ($request->hasFile('imagen')) {
@@ -168,7 +185,7 @@ class ProductoController extends Controller
             }
         }
 
-        // 4. Actualizamos el producto con todos los datos
+        // 4. Actualizamos el producto con los datos validados
         $producto->update($datosActualizar);
 
         // 5. Sincronizamos las tallas y colores al editar
@@ -249,11 +266,13 @@ class ProductoController extends Controller
         $pedido->estado = 'devuelto';
         $pedido->save();
 
-        // 2. Devolvemos el stock a los productos de la tienda
+        // 2. Devolvemos el stock a las variantes de producto (no al producto general)
         foreach ($pedido->orderItems as $item) {
-            $producto = Producto::find($item->producto_id);
-            if ($producto) {
-                $producto->increment('stock', $item->cantidad);
+            if ($item->producto_variante_id) {
+                $variante = \App\Models\ProductoVariante::find($item->producto_variante_id);
+                if ($variante) {
+                    $variante->increment('stock', $item->cantidad);
+                }
             }
         }
 

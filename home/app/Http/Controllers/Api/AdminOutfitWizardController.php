@@ -19,22 +19,11 @@ class AdminOutfitWizardController extends Controller
 
         try {
             // Obtenemos 30 productos activos para tener variedad
-            //$productos = Producto::with('categoria')->where('stock', '>', 0)->inRandomOrder()->take(50)->get();
-            // En tu AdminOutfitWizardController.php
             $productos = Producto::with(['categoria', 'marca', 'colores', 'tallas'])
                 ->where('stock', '>', 0)
                 ->inRandomOrder()
-                ->take(30) //limita la busqueda de productos
+                ->take(30)
                 ->get();
-            // Transformamos los productos a un array muy ligero para no saturar los tokens de la IA
-            /*$inventario = $productos->map(function($prod) {
-                return [
-                    'id' => $prod->id,
-                    'nombre' => $prod->nombre,
-                    'tipo_prenda' => $prod->categoria ? $prod->categoria->nombre : 'Desconocida',
-                    'descripcion' => $prod->descripcion
-                ];
-            });*/
 
             $inventario = $productos->map(function($prod) {
                 return [
@@ -65,18 +54,17 @@ class AdminOutfitWizardController extends Controller
             $userPrompt = "El cliente dice: {$request->user_prompt}. Catálogo: " . json_encode($inventario);
 
 
-            $motor = env('MOTOR_IA', 'groq'); 
+            $motor = config('services.motor_ia', 'groq'); 
             $respuestaTexto = null;
 
             if ($motor === 'groq') {
-                $groqApiKey = env('GROQ_API_KEY');
+                $groqApiKey = config('services.groq.api_key');
 
                 if (!$groqApiKey) {
-                    return response()->json(['error' => 'No se ha configurado la variable GROQ_API_KEY.'], 500);
+                    return response()->json(['error' => 'El servicio de IA no está configurado correctamente.'], 500);
                 }
 
-                $response = Http::withoutVerifying() 
-                    ->timeout(15)
+                $response = Http::timeout(15)
                     ->retry(3, 2000)
                     ->withHeaders([
                         'Authorization' => 'Bearer ' . $groqApiKey,
@@ -93,7 +81,8 @@ class AdminOutfitWizardController extends Controller
                     ]);
 
                 if ($response->failed()) {
-                    return response()->json(['error' => 'Error API Groq: ' . $response->body()], 500);
+                    Log::error('Error API Groq', ['body' => $response->body()]);
+                    return response()->json(['error' => 'El servicio de IA no está disponible en este momento.'], 500);
                 }
 
                 $body = $response->json();
@@ -118,17 +107,19 @@ class AdminOutfitWizardController extends Controller
                 ]);
 
             } elseif ($motor === 'gemini') {
-                // ... (código de Gemini que ya tienes) ...            
-                $geminiApiKey = env('GEMINI_API_KEY');
+                $geminiApiKey = config('services.gemini.api_key');
             
                 if (!$geminiApiKey) {
-                    return response()->json(['error' => 'No se ha configurado la variable GEMINI_API_KEY.'], 500);
+                    return response()->json(['error' => 'El servicio de IA no está configurado correctamente.'], 500);
                 }
 
-            // Llamada a la API de Gemini 
+            // Llamada a la API de Gemini con la API key como cabecera en vez de query param
             $response = Http::timeout(60)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $geminiApiKey, [
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'x-goog-api-key' => $geminiApiKey,
+                ])
+                ->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', [
                     'system_instruction' => [
                         'parts' => [
                             ['text' => $systemPrompt]
@@ -149,7 +140,8 @@ class AdminOutfitWizardController extends Controller
                 ]);
 
             if ($response->failed()) {
-                return response()->json(['error' => 'Error API Gemini: ' . $response->body()], 500);
+                Log::error('Error API Gemini', ['body' => $response->body()]);
+                return response()->json(['error' => 'El servicio de IA no está disponible en este momento.'], 500);
             }
 
             $body = $response->json();
@@ -157,13 +149,13 @@ class AdminOutfitWizardController extends Controller
             $respuestaTexto = $body['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
             if (!$respuestaTexto) {
-                return response()->json(['error' => 'Respuesta vacía de Gemini.'], 500);
+                return response()->json(['error' => 'Respuesta vacía del servicio de IA.'], 500);
             }
 
             $content = json_decode($respuestaTexto, true);
 
             if (!$content || !isset($content['productos_ids'])) {
-                return response()->json(['error' => 'Formato de respuesta inválido de Gemini.'], 500);
+                return response()->json(['error' => 'Formato de respuesta inválido del servicio de IA.'], 500);
             }
 
             $productos_recomendados = Producto::with('categoria')->whereIn('id', $content['productos_ids'])->get();

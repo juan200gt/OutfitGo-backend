@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Models\Producto;
 
 
@@ -12,12 +13,13 @@ class OutfitController extends Controller
 {
     public function generarImagenOutfit(Request $request)
     {
+        // Validación con validate() en lugar de manual
+        $request->validate([
+            'product_ids' => 'required|array|min:1|max:10',
+            'product_ids.*' => 'required|integer|exists:productos,id',
+        ]);
+
         $ids = $request->input('product_ids');
-
-        if (!$ids || !is_array($ids)) {
-            return response()->json(['error' => 'No has seleccionado ninguna prenda.'], 400);
-        }
-
         $productos = Producto::whereIn('id', $ids)->get();
 
         try {
@@ -38,7 +40,7 @@ class OutfitController extends Controller
                             $mime = $imgResponse->header('Content-Type') ?? 'image/jpeg';
                         }
                     } catch (\Exception $e) {
-                        \Log::error("Error al descargar imagen externa: " . $url);
+                        Log::error("Error al descargar imagen externa: " . $url);
                     }
                 } else {
                     $path = public_path($url);
@@ -48,7 +50,7 @@ class OutfitController extends Controller
                         $mime = finfo_file($finfo, $path);
                         finfo_close($finfo);
                     } else {
-                        \Log::error("Archivo no encontrado: " . $path);
+                        Log::error("Archivo no encontrado: " . $path);
                     }
                 }
 
@@ -64,7 +66,13 @@ class OutfitController extends Controller
             $prompt = "Professional fashion photography editorial. A model wearing a complete outfit combining exactly these items: " . $descripcionPrendas . ". High-end studio lighting, 8k, photorealistic, 35mm lens.";
 
             // 3. Llamada a Flux 2 Pro
-            $response = Http::withToken(env('REPLICATE_API_TOKEN'))
+            $replicateToken = config('services.replicate.api_token');
+
+            if (!$replicateToken) {
+                return response()->json(['error' => 'El servicio de generación de imágenes no está configurado.'], 500);
+            }
+
+            $response = Http::withToken($replicateToken)
                 ->withHeaders(['Prefer' => 'wait'])
                 ->timeout(90)
                 ->post('https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions', [
@@ -72,13 +80,12 @@ class OutfitController extends Controller
                         'prompt' => $prompt,
                         'aspect_ratio' => '3:4',
                         'output_format' => 'jpg'
-                        // Nota: En Flux 2 Pro estándar, le pasamos solo el prompt para evitar errores de validación. 
-                        // El modelo dibujará el outfit basándose en los nombres de las prendas.
                     ]
                 ]);
 
             if ($response->failed()) {
-                return response()->json(['error' => 'Error en la IA de Flux', 'details' => $response->json()], 500);
+                Log::error('Error en la IA de Flux', ['body' => $response->body()]);
+                return response()->json(['error' => 'El servicio de generación de imágenes no está disponible en este momento.'], 500);
             }
 
             $resultado = $response->json();
@@ -86,7 +93,8 @@ class OutfitController extends Controller
             $imageUrl = is_array($output) ? $output[0] : $output;
 
             if (!$imageUrl) {
-                return response()->json(['error' => 'La IA no devolvió la imagen final.', 'raw' => $resultado], 500);
+                Log::error('Flux no devolvió imagen', ['raw' => $resultado]);
+                return response()->json(['error' => 'No se pudo generar la imagen del outfit.'], 500);
             }
 
             return response()->json([
@@ -96,8 +104,8 @@ class OutfitController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            // Este es el error de PHP que verías en la pestaña Red
-            return response()->json(['error' => 'Error interno de Laravel', 'msg' => $e->getMessage()], 500);
+            Log::error('Error interno en generarImagenOutfit', ['msg' => $e->getMessage()]);
+            return response()->json(['error' => 'Error al generar el outfit. Inténtalo de nuevo más tarde.'], 500);
         }
     }
 }
