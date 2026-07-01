@@ -66,7 +66,7 @@ class AdminUsuarioController extends Controller
         $reglas = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'nullable|string|max:255',
+            'password' => 'nullable|string|min:8|max:255',
             'rol' => 'required|string|in:cliente,admin_productos,admin_usuarios',
             'direccion' => 'nullable|string|max:255',
             'ciudad' => 'nullable|string|max:255',
@@ -86,18 +86,20 @@ class AdminUsuarioController extends Controller
         $request->validate($reglas, $mensajes);
 
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
-            'rol' => $request->rol,
-            'is_active' => true, 
             'direccion' => $request->direccion,
             'ciudad' => $request->ciudad,
             'provincia' => $request->provincia,
             'codigo_postal' => $request->codigo_postal,
             'telefono' => $request->telefono,
         ]);
+        // Asignar rol e is_active directamente (no por mass assignment)
+        $user->rol = $request->rol;
+        $user->is_active = true;
+        $user->save();
 
         return redirect()->route('admin.usuarios.index')->with('success', 'Usuario creado correctamente.');
     }
@@ -114,7 +116,7 @@ class AdminUsuarioController extends Controller
             'rol' => 'required|string|in:cliente,admin_productos,admin_usuarios',
             'direccion' => 'nullable|string|max:255',
             'ciudad' => 'nullable|string|max:255',
-            'password' => 'nullable|string|max:255',
+            'password' => 'nullable|string|min:8|max:255',
             'provincia' => 'nullable|string|max:255',
             'codigo_postal' => 'nullable|string|max:20',
             'telefono' => 'nullable|string|max:20',
@@ -135,6 +137,7 @@ class AdminUsuarioController extends Controller
         // 2. Actualizamos los datos básicos
         $usuario->name = $request->name;
         $usuario->email = $request->email;
+        // Asignar rol directamente (no por mass assignment)
         $usuario->rol = $request->rol;
 
         // 3. Actualizamos los datos de envío

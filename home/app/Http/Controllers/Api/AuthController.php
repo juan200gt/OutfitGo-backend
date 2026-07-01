@@ -13,6 +13,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class AuthController extends Controller
 {
@@ -35,11 +36,14 @@ class AuthController extends Controller
             'newsletter' => $request->boolean('newsletter'),
         ]);
 
-        // Disparar el evento de registro (esto envía el correo de verificación si MustVerifyEmail está implementado)
+        // Auto-verificar correo ya que se ha quitado la verificación por SMTP
+        $user->markEmailAsVerified();
+
+        // Disparar el evento de registro (ya no enviará correo de verificación porque no implementa MustVerifyEmail)
         event(new Registered($user));
 
         return response()->json([
-            'message' => 'Usuario registrado exitosamente. Por favor, revisa tu correo para verificar tu cuenta.',
+            'message' => 'Usuario registrado exitosamente. Ya puedes iniciar sesión.',
             'user' => $user,
         ], 201);
     }
@@ -61,13 +65,6 @@ class AuthController extends Controller
         if ($user && !$user->is_active) {
             throw ValidationException::withMessages([
                 'email' => ['Tu cuenta ha sido suspendida. Contacta con el administrador.'],
-            ]);
-        }
-
-        // Si el correo no ha sido verificado y no es administrador, no puede entrar.
-        if ($user && !$user->hasVerifiedEmail() && !Str::startsWith($user->rol, 'admin')) {
-            throw ValidationException::withMessages([
-                'email' => ['Su correo no está verificado. Por favor, revisa tu bandeja de entrada.'],
             ]);
         }
 
@@ -106,7 +103,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name'          => 'sometimes|string|max:255',
             'email'         => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
-            'password'      => 'nullable|string|min:8', // Opcional, por si quiere cambiarla
+            'password'      => ['nullable', 'string', 'confirmed', PasswordRule::defaults()],
             'direccion'     => 'nullable|string|max:255',
             'ciudad'        => 'nullable|string|max:100',
             'provincia'     => 'nullable|string|max:100',
@@ -136,19 +133,12 @@ class AuthController extends Controller
     public function verify(Request $request, $id, $hash)
     {
         $user = User::findOrFail($id);
-        $frontendUrl = env('FRONTEND_URL', 'https://outfitgo.duckdns.org');
+        $frontendUrl = config('app.frontend_url', 'https://outfitgo.duckdns.org');
 
-        // 1. Caso de Error: Enlace inválido
-        if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
-            return response($this->getHtmlResponse(
-                false, 
-                'Enlace Inválido', 
-                'El enlace de verificación ha expirado o es incorrecto. Por favor, solicita un nuevo correo de verificación desde la aplicación.',
-                $frontendUrl
-            ));
-        }
+        // Si el middleware 'signed' deja pasar, la firma es válida.
+        // Solo queda comprobar si ya estaba verificado o verificarlo ahora.
 
-        // 2. Caso de éxito: Ya verificado
+        // 1. Caso de éxito: Ya verificado
         if ($user->hasVerifiedEmail()) {
             return response($this->getHtmlResponse(
                 true, 
@@ -158,7 +148,7 @@ class AuthController extends Controller
             ));
         }
 
-        // 3. Caso de éxito: Verificado ahora
+        // 2. Caso de éxito: Verificado ahora
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
         }

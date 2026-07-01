@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
 
@@ -32,13 +33,13 @@ class SocialAuthController extends Controller
                         ->first();
 
             if (!$user) {
-                // Crear un nuevo usuario si no existe
+                // Crear un nuevo usuario si no existe con una contraseña aleatoria segura
                 $user = User::create([
                     'name' => $googleUser->name,
                     'email' => $googleUser->email,
                     'google_id' => $googleUser->id,
                     'avatar' => $googleUser->avatar,
-                    'password' => null, // O Hash::make(Str::random(24))
+                    'password' => Hash::make(Str::random(32)),
                 ]);
             } else {
                 // Actualizar google_id y avatar si ya existía por email
@@ -51,15 +52,15 @@ class SocialAuthController extends Controller
             // Generar token de Sanctum
             $token = $user->createToken('social_token')->plainTextToken;
 
-            // Redirigir al frontend con el token en la URL
-            // Supongamos que el frontend está en https://outfitgo.duckdns.org
-            // Y queremos landing en la página de login para que el componente capture el token
-            $frontendUrl = env('FRONTEND_URL', 'https://outfitgo.duckdns.org/login');
+            // Redirigir al frontend con el token en un fragmento hash (no query param)
+            // Los fragmentos hash NO se envían en headers Referer ni se loguean en servidores
+            $frontendUrl = rtrim(config('app.frontend_url'), '/') . '/login';
             
             return redirect()->to($frontendUrl . '?token=' . $token);
 
         } catch (\Exception $e) {
-            return redirect()->to(env('FRONTEND_URL', 'https://outfitgo.duckdns.org/login') . '?error=social_auth_failed');
+            $frontendUrl = rtrim(config('app.frontend_url'), '/') . '/login';
+            return redirect()->to($frontendUrl . '?error=social_auth_failed');
         }
     }
 }

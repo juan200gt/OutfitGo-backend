@@ -36,6 +36,6 @@ class VerificarRol
             return $next($request);
         }
 
-        abort(403, 'No tienes permiso para acceder a esta área. Tu rol es: ' . $user->rol);
+        abort(403, 'No tienes permiso para acceder a esta área.');
     }
 }
