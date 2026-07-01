@@ -39,6 +39,7 @@ Route::post('/outfit-wizard', [AdminOutfitWizardController::class, 'generate']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verify'])
+    ->middleware('signed')
     ->name('verification.verify');
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
@@ -51,7 +52,7 @@ Route::get('/auth/google/callback', [SocialAuthController::class, 'handleGoogleC
 Route::middleware('auth:sanctum')->group(function () {
     // Usuario autenticado actual
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        return $request->user()->only(['id', 'name', 'email', 'avatar', 'email_verified_at', 'newsletter', 'created_at']);
     });
 
     // Cerrar sesión
