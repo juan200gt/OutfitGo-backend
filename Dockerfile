@@ -1,8 +1,7 @@
-# Usamos una imagen oficial de PHP. La versión 8.2 es ideal para Laravel 10/11.
+# Usamos una imagen oficial de PHP.
 FROM php:8.4-cli
 
 # Instalar dependencias del sistema necesarias
-# (git, zip para composer, librerías para imágenes y bases de datos)
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -13,31 +12,24 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip
 
-# Limpiar caché de apt para reducir el tamaño de la imagen
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Instalar extensiones de PHP en grupos separados (para no saturar la memoria)
-RUN docker-php-ext-install pdo_mysql mbstring
-RUN docker-php-ext-install intl
-RUN docker-php-ext-install pcntl
-RUN docker-php-ext-install bcmath
-RUN docker-php-ext-install gd
+RUN docker-php-ext-install pdo_mysql mbstring intl pcntl bcmath gd
 
-# Instalar Composer (el gestor de paquetes de PHP)
+# Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# (Opcional) Instalar Node.js y NPM para la parte visual (Vite/Frontend)
-# Esto es necesario porque tienes el puerto 5173 abierto en el docker-compose
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
 
 # Establecer el directorio de trabajo dentro del contenedor
 WORKDIR /var/www/html
 
-# Exponer los puertos (Informativo, Docker Compose ya los mapea)
-EXPOSE 8000
-EXPOSE 5173
+# Copiar el código del backend (directorio home) al contenedor
+COPY home/ .
 
-# Comando por defecto al iniciar el contenedor.
-# Usamos bash para que el contenedor se mantenga encendido y puedas entrar a ejecutar comandos
-CMD ["bash"]
+# Instalar dependencias de Composer para producción
+RUN composer install --no-dev --optimize-autoloader
+
+# Exponer el puerto por defecto (Render inyectará el puerto real en $PORT)
+EXPOSE 8000
+
+# Comando para iniciar Laravel en Render usando el puerto dinámico de Render
+CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
